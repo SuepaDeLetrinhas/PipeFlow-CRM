@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * Paleta do PipeFlow (ver CLAUDE.md):
+   * primária índigo, neutros slate, semânticas verde/vermelho/âmbar.
+   * Valores em HSL sem função, como o shadcn/ui espera.
+   */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    /* índigo 600 */
+    --primary: 243.4 75.4% 58.6%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 72.2% 50.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Fechado Ganho */
+    --success: 160.1 84.1% 39.4%;
+    --success-foreground: 210 40% 98%;
+    --success-muted: 152.4 76% 93.7%;
+
+    /* Prazo próximo */
+    --warning: 37.7 92.1% 50.2%;
+    --warning-foreground: 20.9 91.7% 14.1%;
+    --warning-muted: 48 96.5% 88.8%;
+
+    /* Fechado Perdido */
+    --danger: 0 72.2% 50.6%;
+    --danger-foreground: 210 40% 98%;
+    --danger-muted: 0 93.3% 94.1%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 243.4 75.4% 58.6%;
+
+    --chart-1: 243.4 75.4% 58.6%;
+    --chart-2: 238.7 83.5% 66.7%;
+    --chart-3: 234.5 89.5% 73.9%;
+    --chart-4: 160.1 84.1% 39.4%;
+    --chart-5: 37.7 92.1% 50.2%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 47.4% 11.2%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 47.4% 11.2%;
+    --popover-foreground: 210 40% 98%;
+
+    /* índigo 500, mais luminoso sobre fundo escuro */
+    --primary: 238.7 83.5% 66.7%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 158.1 64.4% 51.6%;
+    --success-foreground: 164.3 85.7% 10.4%;
+    --success-muted: 164.5 76% 16.1%;
+
+    --warning: 43.3 96.4% 56.3%;
+    --warning-foreground: 20.9 91.7% 14.1%;
+    --warning-muted: 28.4 72.5% 18%;
+
+    --danger: 0 90.6% 70.8%;
+    --danger-foreground: 0 74.7% 15.5%;
+    --danger-muted: 0 62.8% 20.6%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 238.7 83.5% 66.7%;
+
+    --chart-1: 238.7 83.5% 66.7%;
+    --chart-2: 234.5 89.5% 73.9%;
+    --chart-3: 229.7 93.5% 81.8%;
+    --chart-4: 158.1 64.4% 51.6%;
+    --chart-5: 43.3 96.4% 56.3%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+@layer utilities {
+  /* Métricas, valores em BRL e qualquer número que precise alinhar em coluna. */
+  .text-metric {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
