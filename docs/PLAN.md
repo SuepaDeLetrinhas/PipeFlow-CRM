@@ -24,16 +24,17 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** projeto rodando com o design system aplicado, sem nenhuma tela de produto ainda.
 
-- [ ] `create-next-app` com TypeScript, Tailwind, App Router, ESLint, alias `@/*`
-- [ ] `shadcn init` — tema slate, CSS variables habilitadas
-- [ ] Paleta do CLAUDE.md nas CSS variables (índigo primária; verde/vermelho/âmbar semânticas) em `app/globals.css`
-- [ ] Fonte Inter via `next/font`; `font-variant-numeric: tabular-nums` na classe utilitária de métricas
-- [ ] Dark mode com `next-themes` + toggle funcional
-- [ ] `lib/utils.ts` com `cn()`, `formatCurrency()` (BRL) e `formatDate()` (pt-BR)
-- [ ] Estrutura de pastas vazia conforme CLAUDE.md
-- [ ] `.env.example` com todas as chaves previstas (Supabase, Stripe, Resend)
-- [ ] `.gitignore` cobrindo `.env*.local`; README com instruções de dev
-- [ ] Git inicializado e repositório criado no GitHub
+- [x] `create-next-app` com TypeScript, Tailwind, App Router, ESLint, alias `@/*`
+- [x] `shadcn init` — tema slate, CSS variables habilitadas
+- [x] Paleta do CLAUDE.md nas CSS variables (índigo primária; verde/vermelho/âmbar semânticas) em `app/globals.css`
+- [x] Fonte Inter via `next/font`; `font-variant-numeric: tabular-nums` na classe utilitária de métricas
+- [x] Dark mode com `next-themes` + toggle funcional
+- [x] `lib/utils.ts` com `cn()`, `formatCurrency()` (BRL) e `formatDate()` (pt-BR)
+- [x] Estrutura de pastas vazia conforme CLAUDE.md
+- [x] `.env.example` com todas as chaves previstas (Supabase, Stripe, Resend)
+- [x] `.gitignore` cobrindo `.env*.local`; README com instruções de dev
+- [x] Git inicializado
+- [ ] Repositório criado no GitHub
 
 **Commit final:** `chore: setup Next.js 14 com Tailwind, shadcn/ui e design system`
 
