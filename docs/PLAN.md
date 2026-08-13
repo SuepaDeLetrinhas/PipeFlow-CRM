@@ -33,8 +33,7 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 - [x] Estrutura de pastas vazia conforme CLAUDE.md
 - [x] `.env.example` com todas as chaves previstas (Supabase, Stripe, Resend)
 - [x] `.gitignore` cobrindo `.env*.local`; README com instruções de dev
-- [x] Git inicializado
-- [ ] Repositório criado no GitHub
+- [x] Git inicializado e repositório criado no GitHub
 
 **Commit final:** `chore: setup Next.js 14 com Tailwind, shadcn/ui e design system`
 
