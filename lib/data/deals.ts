@@ -1,5 +1,6 @@
+import { DEAL_STAGES } from "@/lib/constants";
 import { deals } from "@/lib/mock/deals";
-import type { Deal } from "@/types";
+import type { Deal, DealStage } from "@/types";
 
 import { getCurrentWorkspace } from "./workspaces";
 
@@ -26,4 +27,30 @@ export async function getOpenDeals(): Promise<Deal[]> {
     (deal) =>
       deal.stage !== "fechado_ganho" && deal.stage !== "fechado_perdido",
   );
+}
+
+/** Uma entrada por etapa, sempre — coluna vazia é coluna, não ausência. */
+export type DealsByStage = Record<DealStage, Deal[]>;
+
+/**
+ * Negócios do workspace ativo agrupados por etapa, cada grupo já na ordem de
+ * `position`. O board recebe isso pronto: agrupar na tela obrigaria o
+ * componente a conhecer a lista de etapas, que é regra de domínio.
+ *
+ * No M12 o corpo vira uma query com `order("position")` e a assinatura não muda.
+ */
+export async function getDealsByStage(): Promise<DealsByStage> {
+  const workspaceDeals = await getDeals();
+
+  // Semeia todas as etapas antes de distribuir, senão uma etapa sem negócios
+  // sumiria do board em vez de aparecer vazia.
+  const grouped = Object.fromEntries(
+    DEAL_STAGES.map((stage) => [stage, [] as Deal[]]),
+  ) as DealsByStage;
+
+  for (const deal of workspaceDeals) {
+    grouped[deal.stage].push(deal);
+  }
+
+  return grouped;
 }

@@ -44,20 +44,24 @@ const config: Config = {
           foreground: "hsl(var(--destructive-foreground))",
         },
         // Semânticas do domínio: ganho, perdido e prazo próximo.
+        // `foreground` vai sobre o fundo sólido; `on-muted`, sobre o `muted`.
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
           muted: "hsl(var(--success-muted))",
+          "on-muted": "hsl(var(--success-on-muted))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
           muted: "hsl(var(--warning-muted))",
+          "on-muted": "hsl(var(--warning-on-muted))",
         },
         danger: {
           DEFAULT: "hsl(var(--danger))",
           foreground: "hsl(var(--danger-foreground))",
           muted: "hsl(var(--danger-muted))",
+          "on-muted": "hsl(var(--danger-on-muted))",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

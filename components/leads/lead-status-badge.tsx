@@ -9,10 +9,10 @@ import type { LeadStatus } from "@/types";
  */
 const STATUS_CLASSES: Record<LeadStatus, string> = {
   novo: "bg-primary/10 text-primary ring-primary/20",
-  contatado: "bg-warning-muted text-warning-foreground ring-warning/30",
+  contatado: "bg-warning-muted text-warning-on-muted ring-warning/30",
   qualificado: "bg-primary/15 text-primary ring-primary/25",
-  cliente: "bg-success-muted text-success-foreground ring-success/30",
-  perdido: "bg-danger-muted text-danger-foreground ring-danger/30",
+  cliente: "bg-success-muted text-success-on-muted ring-success/30",
+  perdido: "bg-danger-muted text-danger-on-muted ring-danger/30",
 };
 
 interface LeadStatusBadgeProps {

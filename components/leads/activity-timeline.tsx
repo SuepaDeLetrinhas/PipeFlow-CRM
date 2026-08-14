@@ -15,8 +15,8 @@ const TYPE_ICONS: Record<ActivityType, LucideIcon> = {
 
 const TYPE_CLASSES: Record<ActivityType, string> = {
   call: "bg-primary/10 text-primary",
-  email: "bg-warning-muted text-warning-foreground",
-  meeting: "bg-success-muted text-success-foreground",
+  email: "bg-warning-muted text-warning-on-muted",
+  meeting: "bg-success-muted text-success-on-muted",
   note: "bg-muted text-muted-foreground",
 };
 

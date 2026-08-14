@@ -1,18 +1,9 @@
 import { Handshake } from "lucide-react";
 
 import { EmptyState } from "@/components/layout/empty-state";
-import { DEAL_STAGE_LABELS } from "@/lib/constants";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
-import type { Deal, DealStage } from "@/types";
-
-const STAGE_CLASSES: Record<DealStage, string> = {
-  novo_lead: "bg-muted text-muted-foreground",
-  contato_realizado: "bg-primary/10 text-primary",
-  proposta_enviada: "bg-primary/10 text-primary",
-  negociacao: "bg-warning-muted text-warning-foreground",
-  fechado_ganho: "bg-success-muted text-success-foreground",
-  fechado_perdido: "bg-danger-muted text-danger-foreground",
-};
+import { StageBadge } from "@/components/pipeline/stage-badge";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Deal } from "@/types";
 
 interface LeadDealsProps {
   deals: Deal[];
@@ -46,14 +37,7 @@ export function LeadDeals({ deals }: LeadDealsProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span
-              className={cn(
-                "rounded-md px-2 py-0.5 text-xs font-medium",
-                STAGE_CLASSES[deal.stage],
-              )}
-            >
-              {DEAL_STAGE_LABELS[deal.stage]}
-            </span>
+            <StageBadge stage={deal.stage} />
             <span className="text-metric text-sm font-semibold">
               {formatCurrency(deal.value)}
             </span>
