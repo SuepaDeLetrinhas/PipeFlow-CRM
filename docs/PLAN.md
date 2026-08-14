@@ -118,6 +118,12 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Commit final:** `feat: listagem, filtros e página de detalhe de leads`
 
+**Adicionado depois do M4** (`feat: ordenacao por coluna, acoes na linha e busca por telefone`):
+
+- [x] Ordenação por nome, empresa, status e data, com estado na URL (`?ordem=&dir=`)
+- [x] Menu de ações por linha na tabela (editar e excluir sem abrir o detalhe)
+- [x] Busca também por telefone, comparando apenas dígitos
+
 ---
 
 ### M5 · Pipeline Kanban

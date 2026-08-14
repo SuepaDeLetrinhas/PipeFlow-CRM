@@ -11,7 +11,12 @@ import { LeadsTableSkeleton } from "@/components/leads/leads-table-skeleton";
 import { NewLeadButton } from "@/components/leads/new-lead-button";
 import { LEAD_STATUS_LABELS } from "@/lib/constants";
 import { getCurrentUser, getLeadsPage, getMembers } from "@/lib/data";
-import type { LeadFilters } from "@/lib/data/leads";
+import {
+  DEFAULT_LEAD_SORT,
+  type LeadFilters,
+  type LeadSort,
+  type LeadSortField,
+} from "@/lib/data/leads";
 import type { LeadStatus, User } from "@/types";
 
 export const metadata: Metadata = { title: "Leads" };
@@ -29,6 +34,25 @@ function parseDay(value?: string) {
   return value && ISO_DAY.test(value) ? value : undefined;
 }
 
+const SORT_FIELDS: readonly LeadSortField[] = [
+  "name",
+  "company",
+  "status",
+  "created_at",
+];
+
+/** `?ordem=` e `?dir=` forjados caem no padrão em vez de quebrar a tela. */
+function parseSort(field?: string, direction?: string): LeadSort {
+  if (!field || !SORT_FIELDS.includes(field as LeadSortField)) {
+    return DEFAULT_LEAD_SORT;
+  }
+
+  return {
+    field: field as LeadSortField,
+    direction: direction === "asc" ? "asc" : "desc",
+  };
+}
+
 interface LeadsPageProps {
   searchParams: {
     busca?: string;
@@ -37,12 +61,15 @@ interface LeadsPageProps {
     de?: string;
     ate?: string;
     pagina?: string;
+    ordem?: string;
+    dir?: string;
   };
 }
 
 interface LeadsResultsProps {
   filters: LeadFilters;
   page: number;
+  sort: LeadSort;
   owners: User[];
   currentUserId: string;
 }
@@ -56,10 +83,11 @@ interface LeadsResultsProps {
 async function LeadsResults({
   filters,
   page,
+  sort,
   owners,
   currentUserId,
 }: LeadsResultsProps) {
-  const result = await getLeadsPage(filters, page);
+  const result = await getLeadsPage(filters, page, undefined, sort);
   const hasFilters = Object.values(filters).some(Boolean);
   const ownersById = new Map(owners.map((user) => [user.id, user]));
 
@@ -90,7 +118,13 @@ async function LeadsResults({
           : `${result.total} ${result.total === 1 ? "lead" : "leads"} neste workspace.`}
       </p>
 
-      <LeadsTable leads={result.leads} owners={ownersById} />
+      <LeadsTable
+        leads={result.leads}
+        owners={ownersById}
+        ownerOptions={owners}
+        sortField={sort.field}
+        sortDirection={sort.direction}
+      />
 
       {result.pageCount > 1 ? (
         <LeadsPagination
@@ -127,6 +161,7 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
   };
 
   const page = Number(searchParams.pagina) || 1;
+  const sort = parseSort(searchParams.ordem, searchParams.dir);
 
   return (
     <>
@@ -139,12 +174,13 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       {/* A key refaz o boundary a cada filtro: sem ela o React reaproveitaria
           o resultado anterior e o skeleton não reapareceria. */}
       <Suspense
-        key={JSON.stringify({ filters, page })}
+        key={JSON.stringify({ filters, page, sort })}
         fallback={<LeadsTableSkeleton />}
       >
         <LeadsResults
           filters={filters}
           page={page}
+          sort={sort}
           owners={owners}
           currentUserId={currentUser.id}
         />
