@@ -189,13 +189,27 @@ virar dado verdadeiro ou sair — é alegação a cliente.
 
 **Objetivo:** painel de métricas completo, calculado sobre os fixtures.
 
-- [ ] 4 cards de métrica: total de leads, negócios abertos, valor do pipeline, taxa de conversão
-- [ ] Números tabulares e valores em BRL
-- [ ] Gráfico de funil de vendas com Recharts, respeitando a paleta e o dark mode
-- [ ] Lista "meus negócios com prazo próximo", ordenada por data
-- [ ] Skeletons de carregamento por card e por gráfico
-- [ ] Empty state para workspace sem dados
-- [ ] Layout responsivo dos cards e do gráfico
+- [x] 4 cards de métrica: total de leads, negócios abertos, valor do pipeline, taxa de conversão
+- [x] Números tabulares e valores em BRL
+- [x] Gráfico de funil de vendas com Recharts, respeitando a paleta e o dark mode
+- [x] Lista "meus negócios com prazo próximo", ordenada por data
+- [x] Skeletons de carregamento por card e por gráfico
+- [x] Empty state para workspace sem dados
+- [x] Layout responsivo dos cards e do gráfico
+
+**Decisões do M6:**
+
+- [x] Funil cobre só as 4 etapas em aberto — Ganho e Perdido são desfecho, não
+      degrau; incluí-los faria o mesmo negócio ser contado duas vezes
+- [x] Conversão = ganhos ÷ fechados (não ÷ total): negócio em aberto não é
+      fracasso. O card mostra o denominador para a leitura não ficar ambígua
+- [x] Funil e tabela empilhados, não lado a lado — dividindo a largura, a
+      coluna de prazo caía no scroll horizontal mesmo em 1440px
+- [x] Rótulo de valor em toda barra: no tema claro o chartreuse não alcança
+      3:1 contra o fundo, então o número é o que garante a leitura
+- [x] Fixtures ajustadas para o funil afunilar de fato (6 → 4 → 3 → 2)
+- [x] Ícone do card "Valor do pipeline" em `--primary-ink`: o chartreuse puro
+      sumia no tema claro. O token nasceu no M1 e passou a valer aqui no rebase
 
 **Commit final:** `feat: dashboard com métricas e gráfico de funil`
 
