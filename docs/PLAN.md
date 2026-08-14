@@ -63,13 +63,13 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** telas de login/cadastro completas, ainda sem autenticar de verdade.
 
-- [ ] Layout do route group `(auth)` — centralizado, com logo
-- [ ] `/login`: e-mail e senha, link para recuperação, link para cadastro
-- [ ] `/signup`: nome, e-mail, senha
-- [ ] `/forgot-password` e `/reset-password`
-- [ ] Schemas Zod em `lib/validations/auth.ts` + validação no cliente com react-hook-form
-- [ ] Estados de loading, erro por campo e erro geral do formulário
-- [ ] Submit chama Server Action stub que valida e redireciona para `/dashboard`
+- [x] Layout do route group `(auth)` — centralizado, com logo
+- [x] `/login`: e-mail e senha, link para recuperação, link para cadastro
+- [x] `/signup`: nome, e-mail, senha
+- [x] `/forgot-password` e `/reset-password`
+- [x] Schemas Zod em `lib/validations/auth.ts` + validação no cliente com react-hook-form
+- [x] Estados de loading, erro por campo e erro geral do formulário
+- [x] Submit chama Server Action stub que valida e redireciona para `/dashboard`
 
 **Commit final:** `feat: telas de login, cadastro e recuperação de senha`
 
