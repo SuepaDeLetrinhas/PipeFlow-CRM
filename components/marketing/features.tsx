@@ -3,6 +3,7 @@ import {
   Building2,
   KanbanSquare,
   MessageSquare,
+  SlidersHorizontal,
   Users,
 } from "lucide-react";
 
@@ -37,6 +38,12 @@ const features = [
     description:
       "Um workspace por empresa ou cliente, com convite de colaboradores por e-mail e papéis de admin e membro.",
   },
+  {
+    icon: SlidersHorizontal,
+    title: "Busca e filtros",
+    description:
+      "Encontre por nome, empresa, e-mail ou telefone. Filtre por status, responsável e período — o recorte fica na URL e você compartilha do jeito que está.",
+  },
 ];
 
 export function Features() {
@@ -51,18 +58,19 @@ export function Features() {
             O suficiente para vender. Nada além disso.
           </h2>
           <p className="text-balance mt-4 text-muted-foreground">
-            Cinco recursos que resolvem o dia a dia de quem vende — em vez de
+            Seis recursos que resolvem o dia a dia de quem vende — em vez de
             duzentos que ninguém usa.
           </p>
         </div>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map(({ icon: Icon, title, description }) => (
+          {features.map(({ icon: Icon, title, description }, index) => (
             <div
               key={title}
-              className="rounded-xl border bg-card p-6 transition-colors hover:border-primary/40"
+              className="accent-line animate-stagger-in relative overflow-hidden rounded-xl border bg-card p-6 transition-colors hover:border-primary/40"
+              style={{ animationDelay: `${index * 0.06}s` }}
             >
-              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary-ink">
                 <Icon className="size-5" />
               </div>
               <h3 className="mt-4 text-base font-semibold">{title}</h3>

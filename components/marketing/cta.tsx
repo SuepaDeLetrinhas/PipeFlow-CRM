@@ -9,9 +9,16 @@ export function CallToAction() {
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
         {/* rounded-xl (12px) é o teto do guia v2 — nada mais arredondado. */}
         <div className="relative overflow-hidden rounded-xl border bg-card px-6 py-14 text-center sm:px-12">
+          {/* Faixa accent no topo em vez do glow que havia aqui: a mesma
+              linguagem de edge seco das colunas do board. */}
+          <span
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-1 bg-primary"
+          />
+
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_50%_0%,hsl(var(--primary)/0.18),transparent)]"
+            className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(80%_70%_at_50%_0%,black,transparent)] bg-[linear-gradient(hsl(var(--border)/0.5)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.5)_1px,transparent_1px)] bg-[size:48px_48px]"
           />
 
           <div className="relative mx-auto max-w-xl">

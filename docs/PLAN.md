@@ -55,6 +55,23 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Commit final:** `feat: landing page com hero, funcionalidades, planos e CTA`
 
+**Alinhamento ao brand v2** (`fix: alinha a landing page ao brand v2`) — o redesign
+visual reescreveu o `globals.css` mas passou por `components/marketing/` sem
+revisitar; como os componentes usam tokens e não hex, a paleta fluiu sozinha e
+escondeu o que não fluiu:
+
+- [x] Glow radial removido do hero e do CTA — "Neon glow" está em *O que NÃO
+      usar*. No lugar, grid modular com máscara, sobre o grão global do `body`
+- [x] `PipelinePreview` lendo `STAGE_COLORS` e `DEAL_STAGE_LABELS`: a vitrine
+      mostra as seis cores do produto, não um accent binário
+- [x] Labels do preview em `text-label` (mono, caixa alta), como no board
+- [x] Token `--primary-ink`: o chartreuse puro como TEXTO dá 1.13:1 no tema
+      claro. Afetava a headline do hero, os ícones das funcionalidades e os
+      checks do plano Pro — todos ilegíveis em light
+- [x] `.accent-line`: linha accent no topo do card no hover (0 → 100%, 0.4s)
+- [x] Seção de números de resultado, em grid com bordas verticais
+- [x] Sexta funcionalidade (busca e filtros) e entrada escalonada nos cards
+
 ---
 
 ### M2 · Telas de autenticação

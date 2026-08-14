@@ -7,10 +7,18 @@ import { Button } from "@/components/ui/button";
 export function Hero() {
   return (
     <section className="relative overflow-hidden border-b">
-      {/* Brilho índigo atrás do conteúdo, discreto nos dois temas. */}
+      {/*
+       * Grid modular no lugar do glow.
+       *
+       * O v1 tinha aqui um `radial-gradient` da cor primária — o "neon glow"
+       * que o guia v2 lista em O que NÃO usar. A textura do fundo é o grão de
+       * ruído global (`body::before`); a seção acrescenta só a trama de linhas,
+       * que é a "brutalidade controlada" do guia: grid modular, edge seco.
+       * A máscara apaga a trama nas bordas para ela não virar moldura.
+       */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 -top-40 h-80 bg-[radial-gradient(60%_100%_at_50%_100%,hsl(var(--primary)/0.18),transparent)]"
+        className="pointer-events-none absolute inset-0 [mask-image:radial-gradient(70%_60%_at_50%_0%,black,transparent)] bg-[linear-gradient(hsl(var(--border)/0.55)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--border)/0.55)_1px,transparent_1px)] bg-[size:64px_64px]"
       />
 
       <div className="relative mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
@@ -21,7 +29,9 @@ export function Hero() {
 
           <h1 className="text-balance mt-6 text-4xl font-semibold tracking-tight sm:text-5xl">
             Seu funil de vendas inteiro em{" "}
-            <span className="text-primary">uma tela</span>
+            {/* `-ink` porque aqui o accent é texto: em `--primary` puro a
+                headline sumiria no tema claro (1.13:1). */}
+            <span className="text-primary-ink">uma tela</span>
           </h1>
 
           <p className="text-balance mx-auto mt-5 max-w-xl text-base text-muted-foreground sm:text-lg">
