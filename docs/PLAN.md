@@ -45,13 +45,13 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** página pública completa e responsiva em `/`, pronta para receber tráfego.
 
-- [ ] Layout do route group `(marketing)` com header e footer
-- [ ] Seção Hero: headline, subheadline, CTA primário para `/signup`, mockup visual do pipeline
-- [ ] Seção Funcionalidades: cards de Leads, Pipeline Kanban, Atividades, Dashboard, Multi-empresa
-- [ ] Seção Planos: Free (2 colaboradores, 50 leads) e Pro (R$ 49/mês, ilimitado), com destaque no Pro
-- [ ] Seção CTA final
-- [ ] Responsivo mobile (menu hambúrguer) e dark mode revisado
-- [ ] Metadata, Open Graph e favicon
+- [x] Layout do route group `(marketing)` com header e footer
+- [x] Seção Hero: headline, subheadline, CTA primário para `/signup`, mockup visual do pipeline
+- [x] Seção Funcionalidades: cards de Leads, Pipeline Kanban, Atividades, Dashboard, Multi-empresa
+- [x] Seção Planos: Free (2 colaboradores, 50 leads) e Pro (R$ 49/mês, ilimitado), com destaque no Pro
+- [x] Seção CTA final
+- [x] Responsivo mobile (menu hambúrguer) e dark mode revisado
+- [x] Metadata, Open Graph e favicon (`app/icon.svg`) — imagem OG pendente: `next/og` não roda no Windows
 
 **Commit final:** `feat: landing page com hero, funcionalidades, planos e CTA`
 
@@ -63,13 +63,13 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** telas de login/cadastro completas, ainda sem autenticar de verdade.
 
-- [ ] Layout do route group `(auth)` — centralizado, com logo
-- [ ] `/login`: e-mail e senha, link para recuperação, link para cadastro
-- [ ] `/signup`: nome, e-mail, senha
-- [ ] `/forgot-password` e `/reset-password`
-- [ ] Schemas Zod em `lib/validations/auth.ts` + validação no cliente com react-hook-form
-- [ ] Estados de loading, erro por campo e erro geral do formulário
-- [ ] Submit chama Server Action stub que valida e redireciona para `/dashboard`
+- [x] Layout do route group `(auth)` — centralizado, com logo
+- [x] `/login`: e-mail e senha, link para recuperação, link para cadastro
+- [x] `/signup`: nome, e-mail, senha
+- [x] `/forgot-password` e `/reset-password`
+- [x] Schemas Zod em `lib/validations/auth.ts` + validação no cliente com react-hook-form
+- [x] Estados de loading, erro por campo e erro geral do formulário
+- [x] Submit chama Server Action stub que valida e redireciona para `/dashboard`
 
 **Commit final:** `feat: telas de login, cadastro e recuperação de senha`
 
@@ -81,15 +81,17 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** casca navegável da área logada — todas as rotas existem e a navegação funciona.
 
-- [ ] Layout do route group `(app)`: sidebar + área de conteúdo
-- [ ] Sidebar com navegação (Dashboard, Leads, Pipeline, Configurações) e item ativo destacado
-- [ ] Dropdown de troca de workspace no topo da sidebar (lista mockada)
-- [ ] Menu do usuário: nome, avatar, tema, sair
-- [ ] Sidebar colapsável em desktop e drawer em mobile
-- [ ] Fixtures em `lib/mock/`: workspaces, membros, leads, deals, activities, subscription
-- [ ] `lib/data/` com as funções de leitura retornando fixtures
-- [ ] Componentes compartilhados: `PageHeader`, `EmptyState`, `LoadingSkeleton`
-- [ ] Rotas `/dashboard`, `/leads`, `/pipeline`, `/settings` renderizando placeholder
+- [x] Layout do route group `(app)`: sidebar + área de conteúdo
+- [x] Barra superior com título da seção, busca (inerte até o M4), tema e menu do usuário
+- [x] Sidebar com navegação (Dashboard, Leads, Pipeline, Configurações) e item ativo destacado
+- [x] Dropdown de troca de workspace no topo da sidebar (lista mockada)
+- [x] Menu do usuário: nome, avatar, tema, sair
+- [x] Sidebar colapsável em desktop (estado em cookie) e drawer em mobile
+- [x] Dark mode como tema padrão
+- [x] Fixtures em `lib/mock/`: workspaces, membros, leads, deals, activities, subscription
+- [x] `lib/data/` com as funções de leitura retornando fixtures
+- [x] Componentes compartilhados: `PageHeader`, `EmptyState`, `LoadingSkeleton`
+- [x] Rotas `/dashboard`, `/leads`, `/pipeline`, `/settings` renderizando placeholder
 
 **Commit final:** `feat: shell da aplicação com sidebar, workspace switcher e fixtures`
 
