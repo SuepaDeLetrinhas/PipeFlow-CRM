@@ -1,8 +1,15 @@
+import { STAGE_COLORS } from "@/components/pipeline/stage-colors";
+import { DEAL_STAGE_LABELS } from "@/lib/constants";
 import { cn, formatCurrency, initials } from "@/lib/utils";
+import type { DealStage } from "@/types";
 
 /**
  * Mockup estático do pipeline para o hero. Não lê de `lib/data/` de propósito:
  * é vitrine, não produto — os dados aqui existem só para a imagem ser honesta.
+ *
+ * A cor e o rótulo de cada coluna vêm de `STAGE_COLORS` e `DEAL_STAGE_LABELS`,
+ * as mesmas fontes que o board e o funil usam. A vitrine mostra o produto real:
+ * se uma etapa mudar de cor no design system, ela muda aqui junto.
  */
 
 interface PreviewCard {
@@ -13,12 +20,11 @@ interface PreviewCard {
 }
 
 const columns: {
-  label: string;
-  accent?: "default" | "success";
+  stage: DealStage;
   cards: PreviewCard[];
 }[] = [
   {
-    label: "Contato Realizado",
+    stage: "contato_realizado",
     cards: [
       {
         title: "Automação de propostas",
@@ -35,7 +41,7 @@ const columns: {
     ],
   },
   {
-    label: "Proposta Enviada",
+    stage: "proposta_enviada",
     cards: [
       {
         title: "Integração ERP",
@@ -52,7 +58,7 @@ const columns: {
     ],
   },
   {
-    label: "Negociação",
+    stage: "negociacao",
     cards: [
       {
         title: "Catálogo digital",
@@ -63,8 +69,7 @@ const columns: {
     ],
   },
   {
-    label: "Fechado Ganho",
-    accent: "success",
+    stage: "fechado_ganho",
     cards: [
       {
         title: "Prontuário digital",
@@ -95,24 +100,26 @@ export function PipelinePreview() {
       <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-4 lg:grid-cols-4">
         {columns.map((column, index) => {
           const total = column.cards.reduce((sum, card) => sum + card.value, 0);
+          const color = STAGE_COLORS[column.stage];
 
           return (
             <div
-              key={column.label}
+              key={column.stage}
               className={cn(
+                // Coluna em neutro, como no board: a cor da etapa já está no
+                // título e na faixa do card. Tingir o fundo também somaria uma
+                // terceira camada da mesma cor e o mockup viraria bloco.
                 "flex flex-col gap-2 rounded-lg bg-muted/40 p-2.5",
                 // Nas telas estreitas, só as duas primeiras colunas cabem.
                 index > 1 && "hidden lg:flex",
               )}
             >
               <div className="flex items-baseline justify-between gap-2 px-1">
-                <span
-                  className={cn(
-                    "truncate text-xs font-semibold",
-                    column.accent === "success" && "text-success",
-                  )}
-                >
-                  {column.label}
+                {/* `text-label` fora do `cn()`: o tailwind-merge trata
+                    `text-label` e `text-stage-…-ink` como o mesmo grupo de
+                    utilitário e descartaria um dos dois. */}
+                <span className={`text-label truncate ${color.title}`}>
+                  {DEAL_STAGE_LABELS[column.stage]}
                 </span>
                 <span className="text-metric shrink-0 text-[10px] text-muted-foreground">
                   {formatCurrency(total, { compact: true })}
@@ -123,10 +130,17 @@ export function PipelinePreview() {
                 <div
                   key={card.title}
                   className={cn(
-                    "space-y-2 rounded-md border bg-card p-2.5 shadow-sm",
-                    column.accent === "success" && "border-success/40",
+                    "relative space-y-2 overflow-hidden rounded-md border bg-card p-2.5 pl-3 shadow-sm",
+                    color.cardBorder,
                   )}
                 >
+                  {/* Faixa lateral na cor da etapa — a mesma marca que o card
+                      do board carrega. */}
+                  <span
+                    className={cn("absolute inset-y-0 left-0 w-0.5", color.accent)}
+                    aria-hidden
+                  />
+
                   <p className="truncate text-xs font-medium leading-tight">
                     {card.title}
                   </p>
@@ -134,7 +148,7 @@ export function PipelinePreview() {
                     {formatCurrency(card.value)}
                   </p>
                   <div className="flex items-center gap-1.5">
-                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[9px] font-semibold text-muted-foreground">
                       {initials(card.owner)}
                     </span>
                     <span className="truncate text-[10px] text-muted-foreground">

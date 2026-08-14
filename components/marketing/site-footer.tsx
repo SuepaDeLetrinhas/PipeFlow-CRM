@@ -23,15 +23,18 @@ export function SiteFooter() {
           </div>
         </div>
 
+        {/* `-my-2` compensa o padding vertical: o alvo de toque cresce para
+            ~36px sem afastar as linhas do rodapé. Como texto puro, estes links
+            tinham 20px de altura — abaixo do confortável no dedo. */}
         <nav
-          className="flex flex-wrap gap-x-6 gap-y-2"
+          className="-my-2 flex flex-wrap gap-x-6"
           aria-label="Links do rodapé"
         >
           {links.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              className="py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               {link.label}
             </Link>

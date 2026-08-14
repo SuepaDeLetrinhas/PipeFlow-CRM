@@ -29,6 +29,9 @@ const config: Config = {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          // Versão legível como TEXTO — o chartreuse puro não contrasta com o
+          // fundo claro. Mesma ideia dos `stage-*-ink`.
+          ink: "hsl(var(--primary-ink))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

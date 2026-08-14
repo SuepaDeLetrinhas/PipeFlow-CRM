@@ -55,6 +55,34 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Commit final:** `feat: landing page com hero, funcionalidades, planos e CTA`
 
+**Alinhamento ao brand v2** — branch `fix/m1-landing-brand-v2`, commits
+`a16246b` e `d52286b`. O redesign visual reescreveu o `globals.css` mas passou
+por `components/marketing/` sem revisitar; como os componentes usam tokens e
+não hex, a paleta fluiu sozinha e escondeu o que não fluiu:
+
+- [x] Glow radial removido do hero e do CTA — "Neon glow" está em *O que NÃO
+      usar*. No lugar, grid modular com máscara, sobre o grão global do `body`
+- [x] `PipelinePreview` lendo `STAGE_COLORS` e `DEAL_STAGE_LABELS`: a vitrine
+      mostra as seis cores do produto, não um accent binário
+- [x] Labels do preview em `text-label` (mono, caixa alta), como no board
+- [x] Token `--primary-ink`: o chartreuse puro como TEXTO dá 1.13:1 no tema
+      claro. Afetava a headline do hero, os ícones das funcionalidades e os
+      checks do plano Pro — todos ilegíveis em light
+- [x] `.accent-line`: linha accent no topo do card no hover (0 → 100%, 0.4s)
+- [x] Seção de números de resultado, em grid com bordas verticais
+- [x] Sexta funcionalidade (busca e filtros) e entrada escalonada nos cards
+- [x] Alvo de toque dos links do rodapé: eram 20px de altura (texto puro),
+      pequeno demais no dedo — subiram para ~36px sem inchar o rodapé
+
+**Revisão da página** — 8 seções renderizando, os 13 links com destino válido
+(`/login` e `/signup` em 200, âncoras `#funcionalidades` e `#planos` existindo),
+menu mobile abrindo de verdade com os 4 links, e sem scroll horizontal em 390px
+(`scrollWidth == clientWidth == 375`).
+
+⚠️ **Os números de resultado são fictícios.** `+47%`, `3,2x`, `-62%` e `1.200+`
+são placeholder de layout. Antes de a página receber tráfego real eles precisam
+virar dado verdadeiro ou sair — é alegação a cliente.
+
 ---
 
 ### M2 · Telas de autenticação

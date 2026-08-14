@@ -87,7 +87,9 @@ export function Pricing() {
                     <Check
                       className={cn(
                         "mt-0.5 size-4 shrink-0",
-                        plan.highlighted ? "text-primary" : "text-success",
+                        // `-ink`: o chartreuse puro como ícone some no tema
+                        // claro (1.14:1 contra o fundo do card).
+                        plan.highlighted ? "text-primary-ink" : "text-success",
                       )}
                     />
                     <span>{feature}</span>

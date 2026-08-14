@@ -38,6 +38,15 @@
     --primary: 74 100% 60%;
     --primary-foreground: 240 10% 5%;
 
+    /*
+     * O accent quando ele é TEXTO, não fundo.
+     *
+     * O chartreuse puro sobre o fundo claro dá 1.13:1 — ilegível. Este token é
+     * a mesma cor rebaixada até passar contraste (4.7:1); no dark ele volta a
+     * ser o chartreuse cheio. Mesma mecânica dos `--stage-*-ink`.
+     */
+    --primary-ink: 74 80% 25%;
+
     --secondary: 60 5% 94%;
     --secondary-foreground: 240 7% 11%;
 
@@ -133,6 +142,9 @@
     /* Chartreuse mantém o mesmo tom nos dois temas: é a assinatura da marca. */
     --primary: 74 100% 60%;
     --primary-foreground: 240 10% 5%;
+
+    /* No escuro o accent já contrasta como texto: ink volta a ser o chartreuse. */
+    --primary-ink: 74 100% 60%;
 
     --secondary: 240 7% 10%; /* surface-2 */
     --secondary-foreground: 0 0% 91%;
@@ -279,6 +291,28 @@
    */
   .animate-stagger-in {
     animation: stagger-in 0.4s ease-out backwards;
+  }
+
+  /*
+   * Linha accent que cresce no topo do card no hover — o "Accent Line on
+   * Hover" do guia (width 0 → 100%, 0.4s ease). Anima `transform`, não
+   * `width`: escalar no eixo X roda no compositor e não força reflow do card.
+   */
+  .accent-line::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 2px;
+    background: hsl(var(--primary));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .accent-line:hover::before,
+  .accent-line:focus-within::before {
+    transform: scaleX(1);
   }
 }
 
