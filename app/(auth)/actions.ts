@@ -3,6 +3,11 @@
 import { redirect } from "next/navigation";
 
 import {
+  simulateLatency,
+  toFieldErrors,
+  type ActionResult,
+} from "@/lib/actions/result";
+import {
   forgotPasswordSchema,
   resetPasswordSchema,
   signInSchema,
@@ -14,32 +19,12 @@ import {
  *
  * A validação com Zod já é a definitiva: o M9 troca o corpo depois do `parse`
  * por chamadas ao Supabase Auth, sem mexer nas telas nem nas assinaturas.
+ *
+ * `ActionResult` e os helpers moram em `lib/actions/result` porque um arquivo
+ * `"use server"` só pode exportar funções async.
  */
 
-export interface ActionResult {
-  ok: boolean;
-  /** Erro geral do formulário: credencial inválida, e-mail já em uso… */
-  message?: string;
-  /** Erros por campo, no formato que o react-hook-form consome. */
-  fieldErrors?: Record<string, string>;
-}
-
-/** Só existe para o estado de carregamento aparecer enquanto não há rede. */
-function simulateLatency() {
-  return new Promise((resolve) => setTimeout(resolve, 600));
-}
-
-function toFieldErrors(error: {
-  flatten: () => { fieldErrors: Record<string, string[] | undefined> };
-}): Record<string, string> {
-  const { fieldErrors } = error.flatten();
-
-  return Object.fromEntries(
-    Object.entries(fieldErrors)
-      .filter(([, messages]) => messages?.length)
-      .map(([field, messages]) => [field, messages![0]]),
-  );
-}
+export type { ActionResult };
 
 export async function signInAction(input: unknown): Promise<ActionResult> {
   const parsed = signInSchema.safeParse(input);

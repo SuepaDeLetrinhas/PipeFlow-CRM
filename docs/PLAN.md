@@ -103,15 +103,18 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** listagem, filtros e página de detalhe do lead, lendo de `lib/data/`.
 
-- [ ] `/leads`: tabela com nome, empresa, cargo, status, responsável e data
-- [ ] Busca por texto e filtros por status, responsável e período (estado na URL via searchParams)
-- [ ] Badges de status coloridos; paginação ou scroll infinito
-- [ ] Dialog de novo lead com formulário completo e Zod (`lib/validations/lead.ts`)
-- [ ] `/leads/[id]`: header com dados do contato, ações de editar/excluir
-- [ ] Timeline de atividades no detalhe, agrupada por data, com ícone por tipo
-- [ ] Formulário de nova atividade (ligação, e-mail, reunião, nota)
-- [ ] Negócios vinculados ao lead listados no detalhe
-- [ ] Empty states de lista vazia e de busca sem resultado
+- [x] `/leads`: tabela com nome, empresa, cargo, status, responsável e data
+- [x] Busca por texto e filtros por status, responsável e período (estado na URL via searchParams)
+- [x] Badges de status coloridos; paginação ou scroll infinito
+- [x] Dialog de novo lead com formulário completo e Zod (`lib/validations/lead.ts`)
+- [x] `/leads/[id]`: header com dados do contato, ações de editar/excluir
+- [x] Timeline de atividades no detalhe, agrupada por data, com ícone por tipo
+- [x] Formulário de nova atividade (ligação, e-mail, reunião, nota)
+- [x] Negócios vinculados ao lead listados no detalhe
+- [x] Empty states de lista vazia e de busca sem resultado
+- [x] Server Actions de lead e atividade validando com Zod (gravação real no M9)
+- [x] Skeleton da tabela em `<Suspense>` local — um `loading.tsx` no segmento
+      faria `/leads/[id]` responder 200 antes do `notFound()`
 
 **Commit final:** `feat: listagem, filtros e página de detalhe de leads`
 
