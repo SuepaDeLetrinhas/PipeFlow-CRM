@@ -79,7 +79,18 @@ export function LeadsFilters({ owners }: LeadsFiltersProps) {
 
   function clearAll() {
     setTerm("");
-    router.replace(pathname, { scroll: false });
+
+    // "Limpar" zera filtros, não a ordenação: a coluna escolhida é preferência
+    // de leitura da tabela, não um recorte do resultado.
+    const params = new URLSearchParams();
+    const ordem = searchParams.get("ordem");
+    const dir = searchParams.get("dir");
+
+    if (ordem) params.set("ordem", ordem);
+    if (dir) params.set("dir", dir);
+
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   return (
@@ -89,7 +100,7 @@ export function LeadsFilters({ owners }: LeadsFiltersProps) {
         <Input
           value={term}
           onChange={(event) => setTerm(event.target.value)}
-          placeholder="Buscar por nome, empresa ou e-mail"
+          placeholder="Buscar por nome, empresa, e-mail ou telefone"
           className="pl-8"
           aria-label="Buscar leads"
         />

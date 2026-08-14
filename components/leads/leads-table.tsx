@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { LeadRowActions } from "@/components/leads/lead-row-actions";
+import { LeadsSortHeader } from "@/components/leads/leads-sort-header";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -11,27 +13,85 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate, initials } from "@/lib/utils";
+import type { LeadSortField, SortDirection } from "@/lib/data/leads";
 import type { Lead, User } from "@/types";
 
 interface LeadsTableProps {
   leads: Lead[];
   /** Responsáveis indexados por id — evita varrer a lista a cada linha. */
   owners: Map<string, User>;
+  /** Lista para o dialog de edição, que precisa das opções de responsável. */
+  ownerOptions: User[];
+  sortField: LeadSortField;
+  sortDirection: SortDirection;
 }
 
-export function LeadsTable({ leads, owners }: LeadsTableProps) {
+/** `aria-sort` só vale na coluna ativa; nas demais o valor correto é "none". */
+function ariaSort(
+  field: LeadSortField,
+  active: LeadSortField,
+  direction: SortDirection,
+) {
+  if (field !== active) return "none" as const;
+
+  return direction === "asc" ? ("ascending" as const) : ("descending" as const);
+}
+
+export function LeadsTable({
+  leads,
+  owners,
+  ownerOptions,
+  sortField,
+  sortDirection,
+}: LeadsTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead>Nome</TableHead>
-            <TableHead className="hidden md:table-cell">Empresa</TableHead>
+            <TableHead aria-sort={ariaSort("name", sortField, sortDirection)}>
+              <LeadsSortHeader
+                field="name"
+                label="Nome"
+                active={sortField}
+                direction={sortDirection}
+              />
+            </TableHead>
+            <TableHead
+              className="hidden md:table-cell"
+              aria-sort={ariaSort("company", sortField, sortDirection)}
+            >
+              <LeadsSortHeader
+                field="company"
+                label="Empresa"
+                active={sortField}
+                direction={sortDirection}
+              />
+            </TableHead>
             <TableHead className="hidden lg:table-cell">Cargo</TableHead>
-            <TableHead>Status</TableHead>
+            <TableHead aria-sort={ariaSort("status", sortField, sortDirection)}>
+              <LeadsSortHeader
+                field="status"
+                label="Status"
+                active={sortField}
+                direction={sortDirection}
+              />
+            </TableHead>
             <TableHead className="hidden sm:table-cell">Responsável</TableHead>
-            <TableHead className="hidden sm:table-cell text-right">
-              Criado em
+            <TableHead
+              className="hidden sm:table-cell text-right"
+              aria-sort={ariaSort("created_at", sortField, sortDirection)}
+            >
+              <LeadsSortHeader
+                field="created_at"
+                label="Criado em"
+                active={sortField}
+                direction={sortDirection}
+                className="justify-end"
+              />
+            </TableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">Ações</span>
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -82,6 +142,9 @@ export function LeadsTable({ leads, owners }: LeadsTableProps) {
                 </TableCell>
                 <TableCell className="hidden sm:table-cell text-right text-sm text-muted-foreground text-metric">
                   {formatDate(lead.created_at)}
+                </TableCell>
+                <TableCell className="text-right">
+                  <LeadRowActions lead={lead} owners={ownerOptions} />
                 </TableCell>
               </TableRow>
             );
