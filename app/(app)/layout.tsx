@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 
 import { AppShell, SIDEBAR_COOKIE } from "@/components/layout/app-shell";
+import { Toaster } from "@/components/ui/sonner";
 import {
   getCurrentUser,
   getCurrentWorkspace,
@@ -29,6 +30,8 @@ export default async function AppLayout({
       defaultCollapsed={collapsed}
     >
       {children}
+      {/* Só na área autenticada: as telas públicas não disparam toasts. */}
+      <Toaster />
     </AppShell>
   );
 }
