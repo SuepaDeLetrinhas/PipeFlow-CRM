@@ -132,15 +132,24 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** board com drag-and-drop fluido, persistindo apenas em estado local.
 
-- [ ] `/pipeline` com as 6 colunas fixas do PRD
-- [ ] `DealCard`: título, valor em BRL, lead, responsável, prazo — com destaque âmbar em prazo próximo
-- [ ] Colunas com contador de negócios e soma de valores no cabeçalho
-- [ ] @dnd-kit: arrastar entre colunas e reordenar dentro da coluna
-- [ ] Overlay de arraste e indicador de posição de destino
-- [ ] Colunas Ganho/Perdido com tratamento visual distinto (verde/vermelho)
-- [ ] Dialog de novo negócio e de edição, com Zod (`lib/validations/deal.ts`)
-- [ ] Scroll horizontal em telas menores; board utilizável em tablet
-- [ ] Server Action stub de mover negócio, com update otimista
+- [x] `/pipeline` com as 6 colunas fixas do PRD
+- [x] `DealCard`: título, valor em BRL, lead, responsável, prazo — com destaque âmbar em prazo próximo
+- [x] Colunas com contador de negócios e soma de valores no cabeçalho
+- [x] @dnd-kit: arrastar entre colunas e reordenar dentro da coluna
+- [x] Overlay de arraste e indicador de posição de destino
+- [x] Colunas Ganho/Perdido com tratamento visual distinto (verde/vermelho)
+- [x] Dialog de novo negócio e de edição, com Zod (`lib/validations/deal.ts`)
+- [x] Scroll horizontal em telas menores; board utilizável em tablet
+- [x] Server Action stub de mover negócio, com update otimista
+
+**Além do previsto no M5:**
+
+- [x] Navegação por teclado no board (`KeyboardSensor` + anúncios em pt-BR) — o
+      M15 pedia isso, mas sai de graça junto com o @dnd-kit
+- [x] Menu "Mover para" no card, alternativa ao arraste no toque
+- [x] Token `-on-muted` para as semânticas: `-foreground` sobre `bg-*-muted`
+      dava texto invisível em light mode nos badges já em produção
+- [x] `prefers-reduced-motion` zerando as animações de entrada
 
 **Commit final:** `feat: pipeline Kanban com drag-and-drop via @dnd-kit`
 
