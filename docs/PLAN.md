@@ -208,6 +208,8 @@ virar dado verdadeiro ou sair — é alegação a cliente.
 - [x] Rótulo de valor em toda barra: no tema claro o chartreuse não alcança
       3:1 contra o fundo, então o número é o que garante a leitura
 - [x] Fixtures ajustadas para o funil afunilar de fato (6 → 4 → 3 → 2)
+- [x] Ícone do card "Valor do pipeline" em `--primary-ink`: o chartreuse puro
+      sumia no tema claro. O token nasceu no M1 e passou a valer aqui no rebase
 
 **Commit final:** `feat: dashboard com métricas e gráfico de funil`
 

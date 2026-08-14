@@ -42,7 +42,9 @@ export async function MetricsRow() {
         value={formatCurrency(pipelineValue)}
         hint="Soma dos negócios em aberto"
         icon={CircleDollarSign}
-        accent="text-primary"
+        // `-ink` e não `primary`: o chartreuse puro some no tema claro
+        // (1.13:1). Os outros três ícones usam cor de etapa, que já contrasta.
+        accent="text-primary-ink"
       />
 
       <MetricCard

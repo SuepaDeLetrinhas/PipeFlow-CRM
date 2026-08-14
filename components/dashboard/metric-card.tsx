@@ -27,7 +27,7 @@ export function MetricCard({
   value,
   hint,
   icon: Icon,
-  accent = "text-primary",
+  accent = "text-primary-ink",
   className,
 }: MetricCardProps) {
   return (
