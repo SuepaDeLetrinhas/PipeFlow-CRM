@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { CalendarClock, GripVertical } from "lucide-react";
 
 import { DealCardActions } from "@/components/pipeline/deal-card-actions";
+import { STAGE_COLORS } from "@/components/pipeline/stage-colors";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn, formatCurrency, formatDate, initials } from "@/lib/utils";
 import type { Deal, Lead, User } from "@/types";
@@ -69,6 +70,9 @@ export function DealCard({
 
   const dragging = isDragging ?? sortableDragging;
   const due = dueState(deal.due_date);
+  // A cor acompanha a etapa atual: durante o arraste o `onDragOver` já reescreve
+  // `deal.stage`, então o card troca de cor ao entrar na coluna de destino.
+  const color = STAGE_COLORS[deal.stage];
 
   return (
     <article
@@ -79,15 +83,23 @@ export function DealCard({
           : { transform: CSS.Translate.toString(transform), transition }
       }
       className={cn(
-        "group/card relative rounded-lg border bg-card p-3 shadow-sm",
+        "group/card relative overflow-hidden rounded-lg border bg-card p-3 pl-4 shadow-sm",
         "transition-[transform,box-shadow,border-color] duration-200",
-        !overlay && "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md",
+        color.cardBorder,
+        !overlay && cn("hover:-translate-y-0.5 hover:shadow-md", color.cardHover),
         // O original vira fantasma enquanto o overlay carrega o card de verdade.
         dragging && !overlay && "opacity-40",
-        overlay && "rotate-2 border-primary/50 bg-card/80 shadow-lg backdrop-blur-sm",
+        overlay && "rotate-2 bg-card/80 shadow-lg backdrop-blur-sm",
       )}
       aria-label={`${deal.title}, ${formatCurrency(deal.value)}`}
     >
+      {/* Faixa lateral na cor da etapa — repete a marca da coluna no card, e
+          é o que identifica a origem enquanto o card está no ar. */}
+      <span
+        className={cn("absolute inset-y-0 left-0 w-1", color.accent)}
+        aria-hidden
+      />
+
       <div className="flex items-start gap-1.5">
         {/* A alça isola o arraste: sem ela, qualquer clique no card viraria
             drag e o menu de ações ficaria inalcançável no toque. */}

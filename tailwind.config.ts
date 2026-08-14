@@ -63,6 +63,16 @@ const config: Config = {
           muted: "hsl(var(--danger-muted))",
           "on-muted": "hsl(var(--danger-on-muted))",
         },
+        // Uma cor por etapa do pipeline. Usadas com opacidade (/10, /40…) para
+        // tingir coluna e card sem competir com o texto.
+        stage: {
+          "novo-lead": "hsl(var(--stage-novo-lead))",
+          "contato-realizado": "hsl(var(--stage-contato-realizado))",
+          "proposta-enviada": "hsl(var(--stage-proposta-enviada))",
+          negociacao: "hsl(var(--stage-negociacao))",
+          "fechado-ganho": "hsl(var(--stage-fechado-ganho))",
+          "fechado-perdido": "hsl(var(--stage-fechado-perdido))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

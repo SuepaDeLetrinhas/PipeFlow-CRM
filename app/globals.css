@@ -64,6 +64,21 @@
     --danger-muted: 0 93.3% 94.1%;
     --danger-on-muted: 0 74.7% 22%;
 
+    /*
+     * Etapas do pipeline — uma cor por coluna (light).
+     *
+     * As quatro etapas abertas percorrem o espectro do frio ao quente
+     * (azul → ciano → violeta → âmbar): a temperatura sobe conforme o negócio
+     * avança, então a posição no funil é legível pela cor, não só pela ordem.
+     * Ganho e Perdido mantêm verde e vermelho, que o PRD fixa.
+     */
+    --stage-novo-lead: 217.2 91.2% 59.8%;
+    --stage-contato-realizado: 188.7 94.5% 42.7%;
+    --stage-proposta-enviada: 258.3 89.5% 66.3%;
+    --stage-negociacao: 37.7 92.1% 50.2%;
+    --stage-fechado-ganho: 160.1 84.1% 39.4%;
+    --stage-fechado-perdido: 0 72.2% 50.6%;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 243.4 75.4% 58.6%;
@@ -120,6 +135,15 @@
     --danger-foreground: 0 74.7% 15.5%;
     --danger-muted: 0 62.8% 20.6%;
     --danger-on-muted: 0 93.3% 82%;
+
+    /* Etapas do pipeline (dark) — mesma sequência, clareadas para manter o
+       contraste sobre a superfície escura. */
+    --stage-novo-lead: 213.1 93.9% 67.8%;
+    --stage-contato-realizado: 187.9 85.7% 53.3%;
+    --stage-proposta-enviada: 255.1 91.7% 76.3%;
+    --stage-negociacao: 43.3 96.4% 56.3%;
+    --stage-fechado-ganho: 158.1 64.4% 51.6%;
+    --stage-fechado-perdido: 0 90.6% 70.8%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;

@@ -25,7 +25,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { STAGE_COLORS } from "@/components/pipeline/stage-colors";
 import { DEAL_STAGES, DEAL_STAGE_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import type { Deal, DealStage, Lead, User } from "@/types";
 
 import { useMoveDeal } from "./pipeline-board-context";
@@ -95,6 +97,13 @@ export function DealCardActions({ deal, owners, leads }: DealCardActionsProps) {
           >
             {DEAL_STAGES.map((stage) => (
               <DropdownMenuRadioItem key={stage} value={stage}>
+                <span
+                  className={cn(
+                    "mr-2 size-2 shrink-0 rounded-full",
+                    STAGE_COLORS[stage].accent,
+                  )}
+                  aria-hidden
+                />
                 {DEAL_STAGE_LABELS[stage]}
               </DropdownMenuRadioItem>
             ))}

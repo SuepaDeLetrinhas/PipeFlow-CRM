@@ -7,23 +7,10 @@ import {
 } from "@dnd-kit/sortable";
 
 import { DealCard } from "@/components/pipeline/deal-card";
+import { STAGE_COLORS } from "@/components/pipeline/stage-colors";
 import { DEAL_STAGE_LABELS } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { Deal, DealStage, Lead, User } from "@/types";
-
-/**
- * Ganho e Perdido recebem tratamento visual distinto, como pede o PRD: são
- * destinos finais, não mais uma etapa do caminho.
- */
-const COLUMN_ACCENT: Partial<Record<DealStage, string>> = {
-  fechado_ganho: "border-success/40 bg-success-muted/25",
-  fechado_perdido: "border-danger/40 bg-danger-muted/25",
-};
-
-const TITLE_ACCENT: Partial<Record<DealStage, string>> = {
-  fechado_ganho: "text-success",
-  fechado_perdido: "text-danger",
-};
 
 interface PipelineColumnProps {
   stage: DealStage;
@@ -47,6 +34,7 @@ export function PipelineColumn({
 }: PipelineColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: stage });
   const total = deals.reduce((sum, deal) => sum + deal.value, 0);
+  const color = STAGE_COLORS[stage];
 
   return (
     <section
@@ -54,16 +42,17 @@ export function PipelineColumn({
       style={{ animationDelay: `${index * 60}ms` }}
       aria-label={`${DEAL_STAGE_LABELS[stage]}, ${deals.length} ${deals.length === 1 ? "negócio" : "negócios"}`}
     >
-      <header className="flex items-baseline justify-between gap-2 px-1 pb-2">
-        <h2
-          className={cn(
-            "truncate text-sm font-semibold",
-            TITLE_ACCENT[stage] ?? "text-foreground",
-          )}
-        >
+      <header className="flex items-center gap-2 px-1 pb-2">
+        {/* Ponto na cor da etapa: identifica a coluna mesmo quando o título
+            fica truncado, e ancora a associação cor → etapa. */}
+        <span
+          className={cn("size-2 shrink-0 rounded-full", color.accent)}
+          aria-hidden
+        />
+        <h2 className={cn("truncate text-sm font-semibold", color.title)}>
           {DEAL_STAGE_LABELS[stage]}
         </h2>
-        <span className="text-metric shrink-0 text-xs text-muted-foreground">
+        <span className="text-metric ml-auto shrink-0 text-xs text-muted-foreground">
           {deals.length} · {formatCurrency(total, { compact: true })}
         </span>
       </header>
@@ -71,14 +60,23 @@ export function PipelineColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-32 flex-1 flex-col gap-2 rounded-lg border border-transparent bg-muted/40 p-2",
+          "relative flex min-h-32 flex-1 flex-col gap-2 overflow-hidden rounded-lg border p-2",
           "transition-colors duration-200",
-          COLUMN_ACCENT[stage],
-          // Realce do destino durante o arraste — sem ele não há como saber
-          // em qual coluna o card vai cair.
-          isOver && "border-primary/50 bg-primary/5",
+          color.surface,
+          color.border,
+          // Realce do destino durante o arraste, na própria cor da coluna —
+          // sem ele não há como saber onde o card vai cair.
+          isOver && color.over,
         )}
       >
+        {/* Barra superior: a marca de cor mais evidente da coluna. */}
+        <span
+          className={cn(
+            "absolute inset-x-0 top-0 h-0.5",
+            color.accent,
+          )}
+          aria-hidden
+        />
         <SortableContext
           items={deals.map((deal) => deal.id)}
           strategy={verticalListSortingStrategy}
