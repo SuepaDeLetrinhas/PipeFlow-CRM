@@ -263,13 +263,18 @@ export function PipelineBoard({
         sensors={sensors}
         collisionDetection={closestCorners}
         /*
-         * Por padrão o dnd-kit remede os droppables sempre que o estado muda.
-         * Como o `onDragOver` move o card de coluna — o que muda o estado —
-         * medir de novo a cada mudança realimenta o ciclo de remedição.
+         * Congela a medição durante o gesto.
          *
-         * `WhileDragging` mede uma vez ao começar o gesto e volta a medir só
-         * quando as colunas de fato mudam de tamanho. `frequency: Optimized`
-         * agrupa as medições em vez de fazer uma por atualização.
+         * O dnd-kit remede os droppables quando o DOM muda, e o `onDragOver`
+         * muda o DOM ao mover o card de coluna. Se essa mudança altera a
+         * geometria — barra de rolagem que aparece, coluna que cresce —, medir
+         * de novo dispara outra mudança, e o ciclo estoura o
+         * "Maximum update depth exceeded" dentro de `measureRect`.
+         *
+         * `WhileDragging` + `Optimized` agrupa as medições. O que de fato
+         * quebra o ciclo é a geometria estável (altura fixa e canaleta de
+         * rolagem reservada na coluna); a estratégia aqui só reduz a
+         * frequência.
          */
         measuring={{
           droppable: {
@@ -292,13 +297,13 @@ export function PipelineBoard({
         }}
       >
         {/*
-          Altura limitada pela viewport. É ela que dá às colunas um teto fixo:
-          sem isso elas voltam a crescer com o conteúdo e o dnd-kit entra em
-          ciclo de remedição ao mover um card entre colunas.
-          O valor desconta o cabeçalho da página e as margens do shell.
+          O board rola nos dois eixos; as colunas crescem livremente e se
+          alinham pelo topo. Foi assim que o ciclo de remedição do dnd-kit
+          acabou: sem altura fixa na coluna, não há limiar de rolagem para o
+          conteúdo cruzar no meio de um arraste.
         */}
-        <div className="-mx-4 h-[calc(100vh-15rem)] min-h-96 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
-          <div className="flex h-full gap-3">
+        <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
+          <div className="flex items-start gap-3">
             {DEAL_STAGES.map((stage, index) => (
               <PipelineColumn
                 key={stage}

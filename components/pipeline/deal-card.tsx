@@ -59,6 +59,23 @@ export function DealCard({
   isDragging,
   overlay,
 }: DealCardProps) {
+  /*
+   * `data` PRECISA ser memoizado.
+   *
+   * Um literal aqui — `data: { stage: deal.stage }` — é um objeto novo a cada
+   * render. O dnd-kit guarda esse valor e o sincroniza dentro de um
+   * `useEffect` que depende dele; identidade nova a cada render faz o efeito
+   * rodar sem parar, e é isso que o React reporta como
+   * "Maximum update depth exceeded" apontando para `DealCard`.
+   *
+   * O sintoma só aparecia com muitos cards na mesma coluna, porque aí há
+   * re-renders suficientes para o React atingir o limite de updates aninhados.
+   */
+  const sortableData = React.useMemo(
+    () => ({ stage: deal.stage }),
+    [deal.stage],
+  );
+
   const {
     attributes,
     listeners,
@@ -66,7 +83,10 @@ export function DealCard({
     transform,
     transition,
     isDragging: sortableDragging,
-  } = useSortable({ id: deal.id, data: { stage: deal.stage } });
+  } = useSortable({
+    id: deal.id,
+    data: sortableData,
+  });
 
   const dragging = isDragging ?? sortableDragging;
   const due = dueState(deal.due_date);
