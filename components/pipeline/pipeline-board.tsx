@@ -54,11 +54,41 @@ export function PipelineBoard({
   const [board, setBoard] = React.useState<DealsByStage>(initialDeals);
   const [activeDeal, setActiveDeal] = React.useState<Deal | null>(null);
 
+  /**
+   * Assinatura do que veio do servidor. `initialDeals` é um objeto novo a cada
+   * render do Server Component, então depender dele por referência criava um
+   * ciclo: efeito → setBoard → render → objeto novo → efeito. Durante o arraste
+   * o dnd-kit remede a cada mudança de estado, e o ciclo estourava o
+   * "Maximum update depth exceeded" dentro de `measureRect`.
+   *
+   * Comparar o conteúdo faz o efeito rodar só quando o servidor de fato mudou.
+   */
+  const serverSignature = React.useMemo(
+    () =>
+      DEAL_STAGES.map(
+        (stage) =>
+          `${stage}:${initialDeals[stage].map((deal) => `${deal.id}@${deal.position}`).join(",")}`,
+      ).join("|"),
+    [initialDeals],
+  );
+
+  // Guarda a referência mais recente sem virar dependência do efeito.
+  const latestFromServer = React.useRef(initialDeals);
+  latestFromServer.current = initialDeals;
+
+  // Espelho do estado para os handlers do dnd-kit: eles são recriados a cada
+  // render, mas o dnd-kit chama a versão capturada no início do gesto.
+  const latestBoard = React.useRef(board);
+  latestBoard.current = board;
+
+  /** Estado no início do arraste — destino do rollback se a action falhar. */
+  const dragStartSnapshot = React.useRef<DealsByStage | null>(null);
+
   // O servidor é a fonte da verdade: quando ele revalida (criar, editar,
   // excluir), o estado local recomeça do que chegou.
   React.useEffect(() => {
-    setBoard(initialDeals);
-  }, [initialDeals]);
+    setBoard(latestFromServer.current);
+  }, [serverSignature]);
 
   const ownersById = React.useMemo(
     () => new Map(owners.map((user) => [user.id, user])),
@@ -94,41 +124,51 @@ export function PipelineBoard({
   /** Move por menu — o mesmo caminho do arraste, para o toque e o teclado. */
   const moveDeal = React.useCallback(
     (id: string, stage: DealStage) => {
-      setBoard((current) => {
-        const from = findStage(current, id);
-        if (!from || from === stage) return current;
+      // Fora do updater: chamado duas vezes sob StrictMode, o `persist` dispararia
+      // duas requisições e o toast apareceria em dobro.
+      const current = latestBoard.current;
+      const from = findStage(current, id);
 
-        const deal = current[from].find((item) => item.id === id);
-        if (!deal) return current;
+      if (!from || from === stage) return;
 
-        const next: DealsByStage = {
-          ...current,
-          [from]: current[from].filter((item) => item.id !== id),
-          [stage]: [...current[stage], { ...deal, stage }],
-        };
+      const deal = current[from].find((item) => item.id === id);
+      if (!deal) return;
 
-        persist(current, id, stage, next[stage].length - 1);
-        toast.success(`Movido para ${DEAL_STAGE_LABELS[stage]}.`);
-
-        return next;
+      setBoard({
+        ...current,
+        [from]: current[from].filter((item) => item.id !== id),
+        [stage]: [...current[stage], { ...deal, stage }],
       });
+
+      persist(current, id, stage, current[stage].length);
+      toast.success(`Movido para ${DEAL_STAGE_LABELS[stage]}.`);
     },
     [persist],
   );
 
   function onDragStart(event: DragStartEvent) {
-    const stage = findStage(board, String(event.active.id));
+    const current = latestBoard.current;
+    const stage = findStage(current, String(event.active.id));
     const deal = stage
-      ? board[stage].find((item) => item.id === event.active.id)
+      ? current[stage].find((item) => item.id === event.active.id)
       : undefined;
 
+    // Congela o ponto de partida antes de qualquer movimento deste gesto.
+    dragStartSnapshot.current = current;
     setActiveDeal(deal ?? null);
   }
 
-  /** Passa o card para a coluna sob o cursor, para o preview seguir o gesto. */
+  /**
+   * Passa o card para a coluna sob o cursor, para o preview seguir o gesto.
+   *
+   * Só age na TROCA de coluna. O dnd-kit dispara `onDragOver` a cada movimento
+   * do ponteiro; devolver um objeto novo em todos eles forçaria uma remedição a
+   * cada pixel arrastado. Reordenar dentro da mesma coluna fica para o
+   * `onDragEnd`, quando o gesto termina.
+   */
   function onDragOver(event: DragOverEvent) {
     const { active, over } = event;
-    if (!over) return;
+    if (!over || active.id === over.id) return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -137,6 +177,8 @@ export function PipelineBoard({
       const from = findStage(current, activeId);
       const to = findStage(current, overId);
 
+      // `from === to` sai aqui devolvendo o MESMO objeto: o React trata como
+      // "sem mudança" e não re-renderiza.
       if (!from || !to || from === to) return current;
 
       const deal = current[from].find((item) => item.id === activeId);
@@ -165,39 +207,46 @@ export function PipelineBoard({
     if (!over) return;
 
     const activeId = String(active.id);
-    const snapshot = board;
-    const stage = findStage(board, activeId);
+
+    // O `board` do closure está defasado: o `onDragOver` já pode ter movido o
+    // card de coluna neste mesmo gesto. `latestBoard` acompanha o valor atual.
+    const current = latestBoard.current;
+    const stage = findStage(current, activeId);
 
     if (!stage) return;
 
-    const oldIndex = board[stage].findIndex((item) => item.id === activeId);
-    const overIndex = board[stage].findIndex((item) => item.id === over.id);
-    const newIndex = overIndex >= 0 ? overIndex : board[stage].length - 1;
+    const oldIndex = current[stage].findIndex((item) => item.id === activeId);
+    const overIndex = current[stage].findIndex((item) => item.id === over.id);
+    const newIndex = overIndex >= 0 ? overIndex : current[stage].length - 1;
 
-    if (oldIndex === newIndex) {
-      // Não houve reordenação dentro da coluna, mas o onDragOver pode ter
-      // trocado a etapa — nesse caso ainda é preciso persistir.
-      persist(snapshot, activeId, stage, Math.max(newIndex, 0));
-      return;
+    if (oldIndex < 0) return;
+
+    if (oldIndex !== newIndex) {
+      setBoard((state) => ({
+        ...state,
+        [stage]: arrayMove(state[stage], oldIndex, newIndex),
+      }));
     }
 
-    setBoard((current) => ({
-      ...current,
-      [stage]: arrayMove(current[stage], oldIndex, newIndex),
-    }));
-
-    persist(snapshot, activeId, stage, newIndex);
+    // O rollback volta ao estado ANTES do gesto inteiro, guardado no
+    // `onDragStart` — usar `current` devolveria o card à coluna nova.
+    persist(
+      dragStartSnapshot.current ?? current,
+      activeId,
+      stage,
+      Math.max(newIndex, 0),
+    );
   }
 
   const announcements: Announcements = {
     onDragStart: ({ active }) => `Negócio ${active.id} levantado.`,
     onDragOver: ({ over }) =>
       over
-        ? `Sobre ${DEAL_STAGE_LABELS[findStage(board, String(over.id)) ?? "novo_lead"]}.`
+        ? `Sobre ${DEAL_STAGE_LABELS[findStage(latestBoard.current, String(over.id)) ?? "novo_lead"]}.`
         : "Fora de qualquer coluna.",
     onDragEnd: ({ over }) =>
       over
-        ? `Solto em ${DEAL_STAGE_LABELS[findStage(board, String(over.id)) ?? "novo_lead"]}.`
+        ? `Solto em ${DEAL_STAGE_LABELS[findStage(latestBoard.current, String(over.id)) ?? "novo_lead"]}.`
         : "Movimento cancelado.",
     onDragCancel: () => "Movimento cancelado.",
   };
@@ -205,13 +254,25 @@ export function PipelineBoard({
   return (
     <MoveDealProvider value={moveDeal}>
       <DndContext
+        // `id` fixo: sem ele o dnd-kit numera os ids de acessibilidade a partir
+        // de um contador global, que no servidor e no cliente começa em pontos
+        // diferentes — e o React acusa hydration mismatch em `aria-describedby`.
+        id="pipeline-board"
         sensors={sensors}
         collisionDetection={closestCorners}
         accessibility={{ announcements }}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={() => setActiveDeal(null)}
+        onDragCancel={() => {
+          // O onDragOver já pode ter movido o card entre colunas; cancelar (Esc,
+          // ponteiro perdido) precisa desfazer isso à mão — o dnd-kit não mexe
+          // no estado que é nosso.
+          if (dragStartSnapshot.current) {
+            setBoard(dragStartSnapshot.current);
+          }
+          setActiveDeal(null);
+        }}
       >
         <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
           <div className="flex gap-3">
