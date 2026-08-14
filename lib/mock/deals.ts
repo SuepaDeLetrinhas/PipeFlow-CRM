@@ -1,0 +1,233 @@
+import type { Deal } from "@/types";
+
+import { leads } from "./leads";
+import { users } from "./users";
+import { workspaces } from "./workspaces";
+
+const LUMIAR = workspaces[0].id;
+const VERTEX = workspaces[1].id;
+
+const [marina, rafael, camila, diego] = users.map((user) => user.id);
+
+/** `leadId(1)` devolve o id do primeiro lead do fixture — só para legibilidade. */
+const leadId = (n: number) => leads[n - 1].id;
+
+export const deals: Deal[] = [
+  // Novo Lead
+  {
+    id: "d0000000-0000-4000-8000-000000000001",
+    workspace_id: LUMIAR,
+    title: "Implantação de CRM — Agro Fonte",
+    value: 18500,
+    stage: "novo_lead",
+    position: 0,
+    due_date: "2026-08-28",
+    lead_id: leadId(4),
+    owner_id: camila,
+    created_at: "2026-08-03T19:30:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000002",
+    workspace_id: LUMIAR,
+    title: "Site institucional — Escola Sementes",
+    value: 9200,
+    stage: "novo_lead",
+    position: 1,
+    due_date: "2026-09-04",
+    lead_id: leadId(17),
+    owner_id: camila,
+    created_at: "2026-08-12T14:20:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000003",
+    workspace_id: LUMIAR,
+    title: "Campanha de lançamento — Moda Capital",
+    value: 24000,
+    stage: "novo_lead",
+    position: 2,
+    due_date: null,
+    lead_id: leadId(13),
+    owner_id: marina,
+    created_at: "2026-08-11T13:15:00.000Z",
+  },
+
+  // Contato Realizado
+  {
+    id: "d0000000-0000-4000-8000-000000000004",
+    workspace_id: LUMIAR,
+    title: "Automação de propostas — Construtora Piave",
+    value: 31500,
+    stage: "contato_realizado",
+    position: 0,
+    due_date: "2026-08-15",
+    lead_id: leadId(2),
+    owner_id: rafael,
+    created_at: "2026-06-10T09:00:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000005",
+    workspace_id: LUMIAR,
+    title: "Rebranding — Estúdio Marco",
+    value: 12800,
+    stage: "contato_realizado",
+    position: 1,
+    due_date: "2026-08-19",
+    lead_id: leadId(5),
+    owner_id: camila,
+    created_at: "2026-07-22T10:30:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000006",
+    workspace_id: LUMIAR,
+    title: "Portal do cliente — Transvia",
+    value: 46000,
+    stage: "contato_realizado",
+    position: 2,
+    due_date: "2026-09-10",
+    lead_id: leadId(8),
+    owner_id: rafael,
+    created_at: "2026-07-31T11:10:00.000Z",
+  },
+
+  // Proposta Enviada
+  {
+    id: "d0000000-0000-4000-8000-000000000007",
+    workspace_id: LUMIAR,
+    title: "Integração ERP — Norte Logística",
+    value: 68000,
+    stage: "proposta_enviada",
+    position: 0,
+    due_date: "2026-08-14",
+    lead_id: leadId(1),
+    owner_id: marina,
+    created_at: "2026-06-20T13:40:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000008",
+    workspace_id: LUMIAR,
+    title: "App de agendamento — Bela Forma",
+    value: 22400,
+    stage: "proposta_enviada",
+    position: 1,
+    due_date: "2026-08-21",
+    lead_id: leadId(11),
+    owner_id: camila,
+    created_at: "2026-07-05T15:00:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000009",
+    workspace_id: LUMIAR,
+    title: "Consultoria de dados — Meridiano Tech",
+    value: 54000,
+    stage: "proposta_enviada",
+    position: 2,
+    due_date: "2026-09-02",
+    lead_id: leadId(6),
+    owner_id: rafael,
+    created_at: "2026-07-12T09:25:00.000Z",
+  },
+
+  // Negociação
+  {
+    id: "d0000000-0000-4000-8000-000000000010",
+    workspace_id: LUMIAR,
+    title: "Catálogo digital — Ferrolar Parts",
+    value: 37500,
+    stage: "negociacao",
+    position: 0,
+    due_date: "2026-08-16",
+    lead_id: leadId(10),
+    owner_id: marina,
+    created_at: "2026-06-28T16:50:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000011",
+    workspace_id: LUMIAR,
+    title: "Plataforma de reservas — Rota Viva",
+    value: 59900,
+    stage: "negociacao",
+    position: 1,
+    due_date: "2026-08-25",
+    lead_id: leadId(14),
+    owner_id: camila,
+    created_at: "2026-07-03T14:05:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000012",
+    workspace_id: LUMIAR,
+    title: "E-commerce — Casa Nova Decor",
+    value: 41200,
+    stage: "negociacao",
+    position: 2,
+    due_date: "2026-09-18",
+    lead_id: leadId(19),
+    owner_id: marina,
+    created_at: "2026-06-19T10:45:00.000Z",
+  },
+
+  // Fechado Ganho
+  {
+    id: "d0000000-0000-4000-8000-000000000013",
+    workspace_id: LUMIAR,
+    title: "Prontuário digital — Clínica Vitta",
+    value: 72000,
+    stage: "fechado_ganho",
+    position: 0,
+    due_date: "2026-06-30",
+    lead_id: leadId(3),
+    owner_id: marina,
+    created_at: "2026-04-20T12:00:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000014",
+    workspace_id: LUMIAR,
+    title: "Monitoramento 24h — Segura Redes",
+    value: 28800,
+    stage: "fechado_ganho",
+    position: 1,
+    due_date: "2026-07-10",
+    lead_id: leadId(20),
+    owner_id: camila,
+    created_at: "2026-04-12T09:30:00.000Z",
+  },
+
+  // Fechado Perdido
+  {
+    id: "d0000000-0000-4000-8000-000000000015",
+    workspace_id: LUMIAR,
+    title: "Delivery próprio — Doce Ponto",
+    value: 15600,
+    stage: "fechado_perdido",
+    position: 0,
+    due_date: "2026-06-05",
+    lead_id: leadId(7),
+    owner_id: marina,
+    created_at: "2026-05-15T13:20:00.000Z",
+  },
+  {
+    id: "d0000000-0000-4000-8000-000000000016",
+    workspace_id: LUMIAR,
+    title: "Gestão de amostras — Laboratório Micron",
+    value: 33000,
+    stage: "fechado_perdido",
+    position: 1,
+    due_date: "2026-06-12",
+    lead_id: leadId(16),
+    owner_id: rafael,
+    created_at: "2026-05-08T15:10:00.000Z",
+  },
+
+  // Workspace 2
+  {
+    id: "d0000000-0000-4000-8000-000000000017",
+    workspace_id: VERTEX,
+    title: "Diagnóstico de processos — Grupo Atlas",
+    value: 26000,
+    stage: "contato_realizado",
+    position: 0,
+    due_date: "2026-08-27",
+    lead_id: leadId(21),
+    owner_id: diego,
+    created_at: "2026-06-12T10:15:00.000Z",
+  },
+];

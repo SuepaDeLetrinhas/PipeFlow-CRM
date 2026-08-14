@@ -81,15 +81,17 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** casca navegável da área logada — todas as rotas existem e a navegação funciona.
 
-- [ ] Layout do route group `(app)`: sidebar + área de conteúdo
-- [ ] Sidebar com navegação (Dashboard, Leads, Pipeline, Configurações) e item ativo destacado
-- [ ] Dropdown de troca de workspace no topo da sidebar (lista mockada)
-- [ ] Menu do usuário: nome, avatar, tema, sair
-- [ ] Sidebar colapsável em desktop e drawer em mobile
-- [ ] Fixtures em `lib/mock/`: workspaces, membros, leads, deals, activities, subscription
-- [ ] `lib/data/` com as funções de leitura retornando fixtures
-- [ ] Componentes compartilhados: `PageHeader`, `EmptyState`, `LoadingSkeleton`
-- [ ] Rotas `/dashboard`, `/leads`, `/pipeline`, `/settings` renderizando placeholder
+- [x] Layout do route group `(app)`: sidebar + área de conteúdo
+- [x] Barra superior com título da seção, busca (inerte até o M4), tema e menu do usuário
+- [x] Sidebar com navegação (Dashboard, Leads, Pipeline, Configurações) e item ativo destacado
+- [x] Dropdown de troca de workspace no topo da sidebar (lista mockada)
+- [x] Menu do usuário: nome, avatar, tema, sair
+- [x] Sidebar colapsável em desktop (estado em cookie) e drawer em mobile
+- [x] Dark mode como tema padrão
+- [x] Fixtures em `lib/mock/`: workspaces, membros, leads, deals, activities, subscription
+- [x] `lib/data/` com as funções de leitura retornando fixtures
+- [x] Componentes compartilhados: `PageHeader`, `EmptyState`, `LoadingSkeleton`
+- [x] Rotas `/dashboard`, `/leads`, `/pipeline`, `/settings` renderizando placeholder
 
 **Commit final:** `feat: shell da aplicação com sidebar, workspace switcher e fixtures`
 

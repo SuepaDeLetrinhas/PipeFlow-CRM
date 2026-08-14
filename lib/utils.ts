@@ -26,6 +26,17 @@ export function formatCurrency(value: number, options?: { compact?: boolean }) {
   return formatter.format(value);
 }
 
+/** Iniciais para avatares e marcadores: "Marina Duarte" -> "MD". */
+export function initials(name: string, max = 2) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, max)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 const dateFormatters = {
   short: new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }),
   long: new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }),

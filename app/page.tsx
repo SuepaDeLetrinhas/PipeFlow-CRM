@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +53,12 @@ export default function Home() {
             M0 — design system aplicado. Nenhuma tela de produto ainda.
           </p>
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/dashboard">Abrir o app</Link>
+          </Button>
+          <ThemeToggle />
+        </div>
       </header>
 
       <Separator />
