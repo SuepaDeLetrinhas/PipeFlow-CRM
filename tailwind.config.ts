@@ -10,7 +10,10 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        // `sans` é o padrão do corpo; `display` e `mono` são explícitos.
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       colors: {
         background: "hsl(var(--background))",
@@ -72,6 +75,14 @@ const config: Config = {
           negociacao: "hsl(var(--stage-negociacao))",
           "fechado-ganho": "hsl(var(--stage-fechado-ganho))",
           "fechado-perdido": "hsl(var(--stage-fechado-perdido))",
+          // Versão legível como TEXTO — chartreuse e teal puros não contrastam
+          // sobre fundo claro.
+          "novo-lead-ink": "hsl(var(--stage-novo-lead-ink))",
+          "contato-realizado-ink": "hsl(var(--stage-contato-realizado-ink))",
+          "proposta-enviada-ink": "hsl(var(--stage-proposta-enviada-ink))",
+          "negociacao-ink": "hsl(var(--stage-negociacao-ink))",
+          "fechado-ganho-ink": "hsl(var(--stage-fechado-ganho-ink))",
+          "fechado-perdido-ink": "hsl(var(--stage-fechado-perdido-ink))",
         },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

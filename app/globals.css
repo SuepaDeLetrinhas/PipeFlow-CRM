@@ -4,35 +4,52 @@
 
 @layer base {
   /*
-   * Paleta do PipeFlow (ver CLAUDE.md):
-   * primária índigo, neutros slate, semânticas verde/vermelho/âmbar.
-   * Valores em HSL sem função, como o shadcn/ui espera.
+   * Identidade v2 — "Editorial Brutalist × Fintech" (docs/Referencias/
+   * pipeflow-brand-guide-v2.md). Accent chartreuse único, neutros quase
+   * neutros com tint quente, semânticas funcionais.
+   *
+   * Os NOMES das variáveis continuam os do shadcn/ui de propósito: as ~54
+   * telas já consomem `bg-card`, `text-muted-foreground`, `border-border` e
+   * afins, então trocar os VALORES aqui reveste o app inteiro sem tocar nos
+   * componentes.
+   *
+   * Valores em HSL sem função, como o shadcn espera.
+   *
+   * O guia especifica só o dark. O light abaixo é derivado dele: mesmo
+   * chartreuse, mesma temperatura de neutro, invertido — o toggle de tema
+   * entregue no M0 continua valendo.
    */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* #FAFAF9 — papel quente, não branco puro */
+    --background: 60 9% 98%;
+    /* #1A1A1E */
+    --foreground: 240 7% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 7% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 7% 11%;
 
-    /* índigo 600 */
-    --primary: 243.4 75.4% 58.6%;
-    --primary-foreground: 210 40% 98%;
+    /*
+     * Acid Chartreuse #CAFF33. Como fundo de botão pede texto ESCURO —
+     * `--primary-foreground` é quase preto, não branco.
+     */
+    --primary: 74 100% 60%;
+    --primary-foreground: 240 10% 5%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 60 5% 94%;
+    --secondary-foreground: 240 7% 11%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 60 5% 94%;
+    --muted-foreground: 240 3% 45%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 60 5% 94%;
+    --accent-foreground: 240 7% 11%;
 
-    --destructive: 0 72.2% 50.6%;
-    --destructive-foreground: 210 40% 98%;
+    /* Negative #FF4757 */
+    --destructive: 354 100% 64%;
+    --destructive-foreground: 0 0% 100%;
 
     /*
      * Cada semântica tem três papéis:
@@ -46,114 +63,134 @@
      * invisível. Só não aparecia porque o app abre em dark.
      */
 
-    /* Fechado Ganho */
-    --success: 160.1 84.1% 39.4%;
-    --success-foreground: 210 40% 98%;
-    --success-muted: 152.4 76% 93.7%;
-    --success-on-muted: 164.3 85.7% 16%;
+    /* Positive #2ED573 — Fechado Ganho */
+    --success: 149 68% 51%;
+    --success-foreground: 150 90% 8%;
+    --success-muted: 149 65% 90%;
+    --success-on-muted: 150 85% 18%;
 
-    /* Prazo próximo */
-    --warning: 37.7 92.1% 50.2%;
-    --warning-foreground: 20.9 91.7% 14.1%;
-    --warning-muted: 48 96.5% 88.8%;
-    --warning-on-muted: 20.9 91.7% 14.1%;
+    /* Warm #FF6B35 — prazo próximo e urgência */
+    --warning: 17 100% 60%;
+    --warning-foreground: 20 92% 12%;
+    --warning-muted: 20 100% 92%;
+    --warning-on-muted: 18 90% 25%;
 
-    /* Fechado Perdido */
-    --danger: 0 72.2% 50.6%;
-    --danger-foreground: 210 40% 98%;
-    --danger-muted: 0 93.3% 94.1%;
-    --danger-on-muted: 0 74.7% 22%;
+    /* Negative #FF4757 — Fechado Perdido */
+    --danger: 354 100% 64%;
+    --danger-foreground: 354 80% 12%;
+    --danger-muted: 354 100% 94%;
+    --danger-on-muted: 354 75% 32%;
 
     /*
-     * Etapas do pipeline — uma cor por coluna (light).
-     *
-     * As quatro etapas abertas percorrem o espectro do frio ao quente
-     * (azul → ciano → violeta → âmbar): a temperatura sobe conforme o negócio
-     * avança, então a posição no funil é legível pela cor, não só pela ordem.
-     * Ganho e Perdido mantêm verde e vermelho, que o PRD fixa.
+     * Etapas do pipeline, conforme a tabela do guia v2.
+     * Proposta usa o próprio accent chartreuse.
      */
-    --stage-novo-lead: 217.2 91.2% 59.8%;
-    --stage-contato-realizado: 188.7 94.5% 42.7%;
-    --stage-proposta-enviada: 258.3 89.5% 66.3%;
-    --stage-negociacao: 37.7 92.1% 50.2%;
-    --stage-fechado-ganho: 160.1 84.1% 39.4%;
-    --stage-fechado-perdido: 0 72.2% 50.6%;
+    --stage-novo-lead: 225 100% 68%; /* #5B7FFF cool blue */
+    --stage-contato-realizado: 191 100% 42%; /* #00B4D8 teal */
+    --stage-proposta-enviada: 74 100% 60%; /* #CAFF33 chartreuse */
+    --stage-negociacao: 17 100% 60%; /* #FF6B35 warm orange */
+    --stage-fechado-ganho: 149 68% 51%; /* #2ED573 positive */
+    --stage-fechado-perdido: 354 100% 64%; /* #FF4757 negative */
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 243.4 75.4% 58.6%;
+    /*
+     * Chartreuse e teal são claros demais para virar TEXTO sobre fundo claro.
+     * `-ink` é a versão escurecida de cada etapa, usada em título de coluna e
+     * badge no light; o `-stage-*` puro fica para pontos e barras, onde a cor
+     * é preenchimento e o contraste não depende dela.
+     */
+    --stage-novo-lead-ink: 225 70% 45%;
+    --stage-contato-realizado-ink: 191 100% 26%;
+    --stage-proposta-enviada-ink: 74 80% 25%;
+    --stage-negociacao-ink: 17 85% 38%;
+    --stage-fechado-ganho-ink: 150 85% 24%;
+    --stage-fechado-perdido-ink: 354 75% 42%;
 
-    --chart-1: 243.4 75.4% 58.6%;
-    --chart-2: 238.7 83.5% 66.7%;
-    --chart-3: 234.5 89.5% 73.9%;
-    --chart-4: 160.1 84.1% 39.4%;
-    --chart-5: 37.7 92.1% 50.2%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 74 100% 45%;
 
+    --chart-1: 74 100% 60%;
+    --chart-2: 225 100% 68%;
+    --chart-3: 191 100% 42%;
+    --chart-4: 149 68% 51%;
+    --chart-5: 17 100% 60%;
+
+    /* O guia pede edges afiados: nada acima de 12px. */
     --radius: 0.5rem;
   }
 
+  /* O dark é o tema canônico da identidade v2 — os valores vêm direto do guia. */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 240 8% 5%; /* #0C0C0E */
+    --foreground: 0 0% 91%; /* #E8E8E8 */
 
-    --card: 222.2 47.4% 11.2%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 5% 8%; /* #141416 surface */
+    --card-foreground: 0 0% 91%;
 
-    --popover: 222.2 47.4% 11.2%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 7% 10%; /* #1A1A1E surface-2 */
+    --popover-foreground: 0 0% 91%;
 
-    /* índigo 500, mais luminoso sobre fundo escuro */
-    --primary: 238.7 83.5% 66.7%;
-    --primary-foreground: 210 40% 98%;
+    /* Chartreuse mantém o mesmo tom nos dois temas: é a assinatura da marca. */
+    --primary: 74 100% 60%;
+    --primary-foreground: 240 10% 5%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 240 7% 10%; /* surface-2 */
+    --secondary-foreground: 0 0% 91%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 240 7% 10%;
+    --muted-foreground: 240 3% 56%; /* #8A8A8F text-secondary */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 240 7% 10%;
+    --accent-foreground: 0 0% 91%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 354 100% 64%; /* #FF4757 */
+    --destructive-foreground: 0 0% 100%;
 
     /* Em dark os `-muted` são fundos escuros, então o texto sobre eles é claro
        — o oposto do light mode, e por isso `-on-muted` existe separado. */
 
-    --success: 158.1 64.4% 51.6%;
-    --success-foreground: 164.3 85.7% 10.4%;
-    --success-muted: 164.5 76% 16.1%;
-    --success-on-muted: 152.4 76% 80%;
+    --success: 149 68% 51%; /* #2ED573 */
+    --success-foreground: 150 90% 8%;
+    --success-muted: 149 45% 14%;
+    --success-on-muted: 149 70% 70%;
 
-    --warning: 43.3 96.4% 56.3%;
-    --warning-foreground: 20.9 91.7% 14.1%;
-    --warning-muted: 28.4 72.5% 18%;
-    --warning-on-muted: 48 96.5% 77%;
+    --warning: 17 100% 60%; /* #FF6B35 */
+    --warning-foreground: 20 92% 10%;
+    --warning-muted: 17 45% 15%;
+    --warning-on-muted: 20 100% 72%;
 
-    --danger: 0 90.6% 70.8%;
-    --danger-foreground: 0 74.7% 15.5%;
-    --danger-muted: 0 62.8% 20.6%;
-    --danger-on-muted: 0 93.3% 82%;
+    --danger: 354 100% 64%; /* #FF4757 */
+    --danger-foreground: 354 80% 10%;
+    --danger-muted: 354 45% 16%;
+    --danger-on-muted: 354 100% 78%;
 
-    /* Etapas do pipeline (dark) — mesma sequência, clareadas para manter o
-       contraste sobre a superfície escura. */
-    --stage-novo-lead: 213.1 93.9% 67.8%;
-    --stage-contato-realizado: 187.9 85.7% 53.3%;
-    --stage-proposta-enviada: 255.1 91.7% 76.3%;
-    --stage-negociacao: 43.3 96.4% 56.3%;
-    --stage-fechado-ganho: 158.1 64.4% 51.6%;
-    --stage-fechado-perdido: 0 90.6% 70.8%;
+    /* Etapas no dark: os hex do guia valem como estão — foram escolhidos
+       justamente para este fundo. */
+    --stage-novo-lead: 225 100% 68%;
+    --stage-contato-realizado: 191 100% 42%;
+    --stage-proposta-enviada: 74 100% 60%;
+    --stage-negociacao: 17 100% 60%;
+    --stage-fechado-ganho: 149 68% 51%;
+    --stage-fechado-perdido: 354 100% 64%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 238.7 83.5% 66.7%;
+    /* No escuro a própria cor já contrasta como texto: `-ink` = `-stage`,
+       exceto o teal, escuro demais, que é clareado. */
+    --stage-novo-lead-ink: 225 100% 72%;
+    --stage-contato-realizado-ink: 191 90% 55%;
+    --stage-proposta-enviada-ink: 74 100% 60%;
+    --stage-negociacao-ink: 17 100% 65%;
+    --stage-fechado-ganho-ink: 149 68% 55%;
+    --stage-fechado-perdido-ink: 354 100% 70%;
+
+    --border: 240 6% 17%; /* #2A2A2E */
+    --input: 240 6% 17%;
+    --ring: 74 100% 60%;
 
     --chart-1: 238.7 83.5% 66.7%;
-    --chart-2: 234.5 89.5% 73.9%;
-    --chart-3: 229.7 93.5% 81.8%;
-    --chart-4: 158.1 64.4% 51.6%;
-    --chart-5: 43.3 96.4% 56.3%;
+    --chart-2: 225 100% 68%;
+    --chart-3: 191 100% 42%;
+    --chart-4: 149 68% 51%;
+    --chart-5: 17 100% 60%;
   }
 }
 
@@ -164,15 +201,71 @@
 
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv11", "ss01";
+  }
+
+  /*
+   * Textura de ruído sobre o fundo (guia: "Textura > Brilho"). SVG inline em
+   * data URI, sem requisição de rede. `fixed` para não rolar com a página e
+   * `pointer-events: none` para não interceptar cliques.
+   */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    /* Atrás de tudo: em `0` a camada cobriria conteúdo sem `position`, e
+       embora `pointer-events: none` preserve o clique, o texto ficaria sob o
+       ruído. */
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /*
+   * Títulos em Syne com tracking negativo, como manda a hierarquia do guia.
+   *
+   * `:not(.text-label)` porque um cabeçalho de coluna do Kanban é um `h2`
+   * semanticamente, mas visualmente é label (mono, uppercase). Sem a exclusão
+   * esta regra e a utilitária empatam em especificidade e a base vence por vir
+   * depois no arquivo.
+   */
+  h1:not(.text-label),
+  h2:not(.text-label),
+  h3:not(.text-label) {
+    font-family: var(--font-display), system-ui, sans-serif;
+    letter-spacing: -0.03em;
   }
 }
 
 @layer utilities {
-  /* Métricas, valores em BRL e qualquer número que precise alinhar em coluna. */
+  /*
+   * Métricas, valores em BRL e qualquer número que precise alinhar em coluna.
+   * Na v2 os números passam a ser mono — o guia pede IBM Plex Mono para dado.
+   */
   .text-metric {
+    font-family: var(--font-mono), ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.01em;
+  }
+
+  /* Valor de destaque (cards de métrica): Syne bold, tracking negativo. */
+  .text-display-metric {
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  /*
+   * Label técnica: mono, caixa alta e tracking largo. Usada em cabeçalho de
+   * coluna, cabeçalho de tabela e rótulo de métrica.
+   */
+  .text-label {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 0.6875rem;
+    font-weight: 500;
   }
 
   .text-balance {

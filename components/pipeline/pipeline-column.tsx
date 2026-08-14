@@ -59,7 +59,15 @@ export function PipelineColumn({
           className={cn("size-2 shrink-0 rounded-full", color.accent)}
           aria-hidden
         />
-        <h2 className={cn("truncate text-sm font-semibold", color.title)}>
+        {/*
+          Cabeçalho em mono uppercase (guia v2).
+
+          `text-label` fica FORA do `cn()`: o tailwind-merge trata
+          `text-label` e `text-stage-…-ink` como o mesmo grupo de utilitário
+          (`text-*`) e descarta o primeiro, deixando o título em Syne.
+          Concatenar direto preserva os dois.
+        */}
+        <h2 className={`text-label truncate ${color.title}`}>
           {DEAL_STAGE_LABELS[stage]}
         </h2>
         <span className="text-metric ml-auto shrink-0 text-xs text-muted-foreground">

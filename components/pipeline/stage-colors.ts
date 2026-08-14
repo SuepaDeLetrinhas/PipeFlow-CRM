@@ -29,7 +29,7 @@ export interface StageColor {
 export const STAGE_COLORS: Record<DealStage, StageColor> = {
   novo_lead: {
     accent: "bg-stage-novo-lead",
-    title: "text-stage-novo-lead",
+    title: "text-stage-novo-lead-ink",
     surface: "bg-stage-novo-lead/5",
     chip: "bg-stage-novo-lead/15",
     border: "border-stage-novo-lead/20",
@@ -40,7 +40,7 @@ export const STAGE_COLORS: Record<DealStage, StageColor> = {
   },
   contato_realizado: {
     accent: "bg-stage-contato-realizado",
-    title: "text-stage-contato-realizado",
+    title: "text-stage-contato-realizado-ink",
     surface: "bg-stage-contato-realizado/5",
     chip: "bg-stage-contato-realizado/15",
     border: "border-stage-contato-realizado/20",
@@ -51,7 +51,7 @@ export const STAGE_COLORS: Record<DealStage, StageColor> = {
   },
   proposta_enviada: {
     accent: "bg-stage-proposta-enviada",
-    title: "text-stage-proposta-enviada",
+    title: "text-stage-proposta-enviada-ink",
     surface: "bg-stage-proposta-enviada/5",
     chip: "bg-stage-proposta-enviada/15",
     border: "border-stage-proposta-enviada/20",
@@ -62,7 +62,7 @@ export const STAGE_COLORS: Record<DealStage, StageColor> = {
   },
   negociacao: {
     accent: "bg-stage-negociacao",
-    title: "text-stage-negociacao",
+    title: "text-stage-negociacao-ink",
     surface: "bg-stage-negociacao/5",
     chip: "bg-stage-negociacao/15",
     border: "border-stage-negociacao/20",
@@ -73,7 +73,7 @@ export const STAGE_COLORS: Record<DealStage, StageColor> = {
   },
   fechado_ganho: {
     accent: "bg-stage-fechado-ganho",
-    title: "text-stage-fechado-ganho",
+    title: "text-stage-fechado-ganho-ink",
     surface: "bg-stage-fechado-ganho/5",
     chip: "bg-stage-fechado-ganho/15",
     border: "border-stage-fechado-ganho/20",
@@ -84,7 +84,7 @@ export const STAGE_COLORS: Record<DealStage, StageColor> = {
   },
   fechado_perdido: {
     accent: "bg-stage-fechado-perdido",
-    title: "text-stage-fechado-perdido",
+    title: "text-stage-fechado-perdido-ink",
     surface: "bg-stage-fechado-perdido/5",
     chip: "bg-stage-fechado-perdido/15",
     border: "border-stage-fechado-perdido/20",
