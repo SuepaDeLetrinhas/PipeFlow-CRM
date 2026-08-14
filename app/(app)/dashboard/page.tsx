@@ -1,43 +1,28 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { LayoutDashboard } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-header";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card";
-import { getDeals, getLeads, getOpenDeals } from "@/lib/data";
-import { formatCurrency } from "@/lib/utils";
+  FunnelChartSkeleton,
+  MetricsRowSkeleton,
+  UpcomingDealsSkeleton,
+} from "@/components/dashboard/dashboard-skeletons";
+import { FunnelCard } from "@/components/dashboard/funnel-card";
+import { MetricsRow } from "@/components/dashboard/metrics-row";
+import { UpcomingDealsCard } from "@/components/dashboard/upcoming-deals-card";
+import { EmptyState } from "@/components/layout/empty-state";
+import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
+import { getDeals, getLeads } from "@/lib/data";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
-  const [leads, deals, openDeals] = await Promise.all([
-    getLeads(),
-    getDeals(),
-    getOpenDeals(),
-  ]);
-
-  const pipelineValue = openDeals.reduce((total, deal) => total + deal.value, 0);
-  const won = deals.filter((deal) => deal.stage === "fechado_ganho").length;
-  const closed =
-    won + deals.filter((deal) => deal.stage === "fechado_perdido").length;
-  const conversion = closed > 0 ? (won / closed) * 100 : 0;
-
-  // Números diretos dos fixtures, só para provar que `lib/data/` está ligada.
-  // Cards definitivos, funil e prazos ficam para o milestone do dashboard.
-  const metrics = [
-    { label: "Total de leads", value: String(leads.length) },
-    { label: "Negócios abertos", value: String(openDeals.length) },
-    { label: "Valor do pipeline", value: formatCurrency(pipelineValue) },
-    {
-      label: "Taxa de conversão",
-      value: `${conversion.toLocaleString("pt-BR", {
-        maximumFractionDigits: 1,
-      })}%`,
-    },
-  ];
+  // Workspace recém-criado não deve mostrar quatro zeros e um gráfico vazio:
+  // sem nenhum lead nem negócio, a tela vira um convite a começar.
+  const [leads, deals] = await Promise.all([getLeads(), getDeals()]);
+  const isEmpty = leads.length === 0 && deals.length === 0;
 
   return (
     <>
@@ -46,20 +31,48 @@ export default async function DashboardPage() {
         description="Visão geral do workspace ativo."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <Card key={metric.label}>
-            <CardHeader className="pb-2">
-              <CardDescription>{metric.label}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-metric text-2xl font-semibold">
-                {metric.value}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {isEmpty ? (
+        <EmptyState
+          icon={LayoutDashboard}
+          title="Nada para medir ainda"
+          description="Cadastre o primeiro lead e abra um negócio no pipeline — as métricas aparecem aqui automaticamente."
+          action={
+            <Button asChild>
+              <Link href="/leads">Cadastrar primeiro lead</Link>
+            </Button>
+          }
+        />
+      ) : (
+        /*
+         * Um `<Suspense>` por bloco, e não um só em volta de tudo: no M13 cada
+         * função de `lib/data/` vira uma query agregada com latência própria, e
+         * o streaming por bloco já fica ligado sem mexer no layout.
+         */
+        <div className="space-y-6">
+          <Suspense fallback={<MetricsRowSkeleton />}>
+            <MetricsRow />
+          </Suspense>
+
+          {/*
+           * Um bloco por linha, e não lado a lado.
+           *
+           * A tabela tem cinco colunas de texto — negócio, etapa, responsável,
+           * valor e prazo. Dividindo a largura com o gráfico, mesmo em 8/12 de
+           * 1440px, a coluna de prazo caía fora e virava scroll horizontal:
+           * justamente a informação que a tabela existe para dar. O funil, por
+           * ser barra horizontal, aproveita bem a largura inteira.
+           */}
+          <Suspense fallback={<FunnelChartSkeleton />}>
+            <FunnelCard />
+          </Suspense>
+
+          <div className="min-w-0">
+            <Suspense fallback={<UpcomingDealsSkeleton />}>
+              <UpcomingDealsCard />
+            </Suspense>
+          </div>
+        </div>
+      )}
     </>
   );
 }
