@@ -1,35 +1,76 @@
 import type { Metadata } from "next";
-import { KanbanSquare, Plus } from "lucide-react";
+import { KanbanSquare } from "lucide-react";
 
 import { EmptyState } from "@/components/layout/empty-state";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
-import { getOpenDeals } from "@/lib/data";
+import { NewDealButton } from "@/components/pipeline/new-deal-button";
+import { PipelineBoard } from "@/components/pipeline/pipeline-board";
+import {
+  getCurrentUser,
+  getDealsByStage,
+  getLeads,
+  getMembers,
+} from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
+import type { Deal } from "@/types";
 
 export const metadata: Metadata = { title: "Pipeline" };
 
 export default async function PipelinePage() {
-  const openDeals = await getOpenDeals();
-  const total = openDeals.reduce((sum, deal) => sum + deal.value, 0);
+  const [dealsByStage, currentUser, members, leads] = await Promise.all([
+    getDealsByStage(),
+    getCurrentUser(),
+    getMembers(),
+    getLeads(),
+  ]);
+
+  const owners = members.map((member) => member.user);
+  const allDeals: Deal[] = Object.values(dealsByStage).flat();
+
+  // O cabeçalho fala do que está em jogo — negócios fechados não contam.
+  const openDeals = allDeals.filter(
+    (deal) =>
+      deal.stage !== "fechado_ganho" && deal.stage !== "fechado_perdido",
+  );
+  const openTotal = openDeals.reduce((sum, deal) => sum + deal.value, 0);
 
   return (
     <>
       <PageHeader
         title="Pipeline"
-        description={`${openDeals.length} negócios abertos · ${formatCurrency(total)}`}
+        description={
+          openDeals.length === 1
+            ? `1 negócio aberto · ${formatCurrency(openTotal)}`
+            : `${openDeals.length} negócios abertos · ${formatCurrency(openTotal)}`
+        }
       >
-        <Button disabled>
-          <Plus />
-          Novo negócio
-        </Button>
+        <NewDealButton
+          owners={owners}
+          leads={leads}
+          defaultOwnerId={currentUser.id}
+        />
       </PageHeader>
 
-      <EmptyState
-        icon={KanbanSquare}
-        title="O board Kanban entra em uma aula própria"
-        description="As seis etapas do PRD já estão em lib/constants e os negócios em lib/mock. Falta montar as colunas e o drag-and-drop."
-      />
+      {allDeals.length === 0 ? (
+        <EmptyState
+          icon={KanbanSquare}
+          title="Nenhum negócio no pipeline"
+          description="Crie a primeira oportunidade para acompanhar o funil de vendas deste workspace."
+          action={
+            <NewDealButton
+              owners={owners}
+              leads={leads}
+              defaultOwnerId={currentUser.id}
+            />
+          }
+        />
+      ) : (
+        <PipelineBoard
+          initialDeals={dealsByStage}
+          owners={owners}
+          leads={leads}
+        />
+      )}
     </>
   );
 }

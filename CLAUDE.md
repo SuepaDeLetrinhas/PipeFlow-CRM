@@ -77,14 +77,26 @@ docs/
 
 ## Identidade visual
 
-Referências: HubSpot CRM, Pipedrive, DataCrazy. Interface limpa, densidade de dados alta, cantos suaves, sem ornamento.
+**Editorial Brutalist × Fintech.** Especificação completa em
+[docs/Referencias/pipeflow-brand-guide-v2.md](docs/Referencias/pipeflow-brand-guide-v2.md) —
+em caso de divergência sobre visual, o guia manda.
 
-- **Primária**: azul índigo — ações, links, estágio ativo
-- **Neutros**: escala slate para superfícies, bordas e texto
-- **Semânticas**: verde (Fechado Ganho), vermelho (Fechado Perdido), âmbar (prazo próximo)
-- **Tipografia**: Inter; números tabulares em métricas e valores
-- **Dark mode** via CSS variables do shadcn, previsto desde o início
+Princípios: contenção acima de espetáculo, dados como interface, tipografia com
+caráter, edges afiados e textura no lugar de brilho.
+
+- **Accent**: chartreuse ácido `#CAFF33`, uma cor só — CTAs, destaques, item ativo
+- **Neutros**: quase-preto com tint quente (`#0C0C0E` fundo, `#141416` superfície)
+- **Semânticas**: verde `#2ED573` (Ganho), vermelho `#FF4757` (Perdido), laranja `#FF6B35` (prazo/urgência)
+- **Etapas do pipeline**: uma cor por coluna, repetida nos cards — azul, teal, chartreuse, laranja, verde, vermelho
+- **Tipografia**: Syne (títulos e métricas), DM Sans (corpo e UI), IBM Plex Mono (valores, labels e metadata)
+- **Labels** em mono, caixa alta, `letter-spacing: 0.15em`
+- **Raio máximo de 12px**; sem glassmorphism, gradient text, neon glow ou partículas
+- **Dark é o tema canônico**; o light é derivado dele e o toggle continua valendo
 - Cards do Kanban compactos: título, valor, lead, responsável, prazo — nessa ordem de peso visual
+
+Os tokens vivem em `app/globals.css` com os **nomes do shadcn/ui** (`--primary`,
+`--card`, `--muted-foreground`…). Trocar valor lá reveste o app inteiro; por isso
+nenhum componente deve cravar cor em hex.
 
 ## Milestones
 

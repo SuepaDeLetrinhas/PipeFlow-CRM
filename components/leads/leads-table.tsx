@@ -47,7 +47,9 @@ export function LeadsTable({
   return (
     <div className="overflow-x-auto rounded-lg border">
       <Table>
-        <TableHeader>
+        {/* Cabeçalho em mono uppercase (guia v2). Aplicado aqui, e não em
+            components/ui/table.tsx, que é gerado pela CLI do shadcn. */}
+        <TableHeader className="[&_th]:text-label">
           <TableRow className="hover:bg-transparent">
             <TableHead aria-sort={ariaSort("name", sortField, sortDirection)}>
               <LeadsSortHeader

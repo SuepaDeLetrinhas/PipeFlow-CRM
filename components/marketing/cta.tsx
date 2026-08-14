@@ -7,7 +7,8 @@ export function CallToAction() {
   return (
     <section className="py-16 sm:py-20">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        <div className="relative overflow-hidden rounded-2xl border bg-card px-6 py-14 text-center sm:px-12">
+        {/* rounded-xl (12px) é o teto do guia v2 — nada mais arredondado. */}
+        <div className="relative overflow-hidden rounded-xl border bg-card px-6 py-14 text-center sm:px-12">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_120%_at_50%_0%,hsl(var(--primary)/0.18),transparent)]"
