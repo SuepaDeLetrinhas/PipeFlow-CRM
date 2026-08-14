@@ -45,13 +45,13 @@ Convenção de branch: `feat/mN-slug`, sempre a partir de `main`, PR ao final do
 
 **Objetivo:** página pública completa e responsiva em `/`, pronta para receber tráfego.
 
-- [ ] Layout do route group `(marketing)` com header e footer
-- [ ] Seção Hero: headline, subheadline, CTA primário para `/signup`, mockup visual do pipeline
-- [ ] Seção Funcionalidades: cards de Leads, Pipeline Kanban, Atividades, Dashboard, Multi-empresa
-- [ ] Seção Planos: Free (2 colaboradores, 50 leads) e Pro (R$ 49/mês, ilimitado), com destaque no Pro
-- [ ] Seção CTA final
-- [ ] Responsivo mobile (menu hambúrguer) e dark mode revisado
-- [ ] Metadata, Open Graph e favicon
+- [x] Layout do route group `(marketing)` com header e footer
+- [x] Seção Hero: headline, subheadline, CTA primário para `/signup`, mockup visual do pipeline
+- [x] Seção Funcionalidades: cards de Leads, Pipeline Kanban, Atividades, Dashboard, Multi-empresa
+- [x] Seção Planos: Free (2 colaboradores, 50 leads) e Pro (R$ 49/mês, ilimitado), com destaque no Pro
+- [x] Seção CTA final
+- [x] Responsivo mobile (menu hambúrguer) e dark mode revisado
+- [x] Metadata, Open Graph e favicon (`app/icon.svg`) — imagem OG pendente: `next/og` não roda no Windows
 
 **Commit final:** `feat: landing page com hero, funcionalidades, planos e CTA`
 
