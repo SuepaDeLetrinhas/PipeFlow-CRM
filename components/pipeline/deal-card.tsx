@@ -84,9 +84,24 @@ export function DealCard({
       }
       className={cn(
         "group/card relative overflow-hidden rounded-lg border bg-card p-3 pl-4 shadow-sm",
-        "transition-[transform,box-shadow,border-color] duration-200",
+        /*
+         * A transição NÃO pode incluir `transform`.
+         *
+         * O dnd-kit escreve `transform` inline a cada quadro do arraste (linha
+         * acima). Animar a mesma propriedade por CSS faz o elemento ficar em
+         * movimento contínuo, e como o dnd-kit remede o retângulo a cada
+         * atualização, medição e animação se realimentam — é o
+         * "Maximum update depth exceeded" dentro de `measureRect`.
+         *
+         * Sombra e borda continuam animadas; o realce do hover passa a ser só
+         * sombra e cor, sem deslocar o card.
+         */
+        "transition-[box-shadow,border-color] duration-200",
         color.cardBorder,
-        !overlay && cn("hover:-translate-y-0.5 hover:shadow-md", color.cardHover),
+        // O hover só vale quando nada está sendo arrastado: durante o gesto o
+        // ponteiro passa por cima dos vizinhos, e mexer na geometria deles
+        // reabriria o mesmo ciclo de remedição.
+        !overlay && !dragging && cn("hover:shadow-md", color.cardHover),
         // O original vira fantasma enquanto o overlay carrega o card de verdade.
         dragging && !overlay && "opacity-40",
         overlay && "rotate-2 bg-card/80 shadow-lg backdrop-blur-sm",

@@ -38,7 +38,17 @@ export function PipelineColumn({
 
   return (
     <section
-      className="animate-stagger-in flex w-72 shrink-0 flex-col"
+      /*
+       * `h-full` + altura fixa vinda do board: a área que recebe os cards não
+       * pode crescer conforme o conteúdo.
+       *
+       * Com `flex-1` sobre conteúdo variável, mover um card para cá aumentava a
+       * altura da coluna; o dnd-kit remedia, o React re-renderizava e a altura
+       * mudava de novo — um ciclo geométrico que estourava o
+       * "Maximum update depth exceeded". Com a altura estável, mover um card
+       * não altera o retângulo que o dnd-kit mede.
+       */
+      className="animate-stagger-in flex h-full w-72 shrink-0 flex-col"
       style={{ animationDelay: `${index * 60}ms` }}
       aria-label={`${DEAL_STAGE_LABELS[stage]}, ${deals.length} ${deals.length === 1 ? "negócio" : "negócios"}`}
     >
@@ -60,7 +70,10 @@ export function PipelineColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "relative flex min-h-32 flex-1 flex-col gap-2 overflow-hidden rounded-lg border p-2",
+          // `min-h-0` + `overflow-y-auto`: a coluna tem altura fixa e rola por
+          // dentro. Sem `min-h-0` o flex item ignora o limite e volta a crescer
+          // com o conteúdo, que é o que realimentava a remedição do dnd-kit.
+          "relative flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-lg border p-2",
           "transition-colors duration-200",
           color.surface,
           color.border,
@@ -69,10 +82,12 @@ export function PipelineColumn({
           isOver && color.over,
         )}
       >
-        {/* Barra superior: a marca de cor mais evidente da coluna. */}
+        {/* Barra superior: a marca de cor mais evidente da coluna. `sticky`
+            porque o container agora rola — `absolute` sairia de vista. O
+            `-mx-2 -mt-2` compensa o padding do container. */}
         <span
           className={cn(
-            "absolute inset-x-0 top-0 h-0.5",
+            "sticky top-0 -mx-2 -mt-2 h-0.5 shrink-0",
             color.accent,
           )}
           aria-hidden

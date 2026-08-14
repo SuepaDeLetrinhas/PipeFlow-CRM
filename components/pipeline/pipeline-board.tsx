@@ -5,6 +5,8 @@ import {
   DndContext,
   DragOverlay,
   KeyboardSensor,
+  MeasuringFrequency,
+  MeasuringStrategy,
   PointerSensor,
   closestCorners,
   useSensor,
@@ -260,6 +262,21 @@ export function PipelineBoard({
         id="pipeline-board"
         sensors={sensors}
         collisionDetection={closestCorners}
+        /*
+         * Por padrão o dnd-kit remede os droppables sempre que o estado muda.
+         * Como o `onDragOver` move o card de coluna — o que muda o estado —
+         * medir de novo a cada mudança realimenta o ciclo de remedição.
+         *
+         * `WhileDragging` mede uma vez ao começar o gesto e volta a medir só
+         * quando as colunas de fato mudam de tamanho. `frequency: Optimized`
+         * agrupa as medições em vez de fazer uma por atualização.
+         */
+        measuring={{
+          droppable: {
+            strategy: MeasuringStrategy.WhileDragging,
+            frequency: MeasuringFrequency.Optimized,
+          },
+        }}
         accessibility={{ announcements }}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
@@ -274,8 +291,14 @@ export function PipelineBoard({
           setActiveDeal(null);
         }}
       >
-        <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
-          <div className="flex gap-3">
+        {/*
+          Altura limitada pela viewport. É ela que dá às colunas um teto fixo:
+          sem isso elas voltam a crescer com o conteúdo e o dnd-kit entra em
+          ciclo de remedição ao mover um card entre colunas.
+          O valor desconta o cabeçalho da página e as margens do shell.
+        */}
+        <div className="-mx-4 h-[calc(100vh-15rem)] min-h-96 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
+          <div className="flex h-full gap-3">
             {DEAL_STAGES.map((stage, index) => (
               <PipelineColumn
                 key={stage}
