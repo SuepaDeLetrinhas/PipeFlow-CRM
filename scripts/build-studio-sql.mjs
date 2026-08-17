@@ -93,14 +93,60 @@ const HEADER = `-- =============================================================
 --   2. Cole este arquivo inteiro e execute (Run)
 --   3. Confira o resultado com supabase/studio/verify_rls.sql
 --
--- Reexecutavel: enums, policies e triggers estao protegidos, entao rodar duas
--- vezes nao quebra. As tabelas usam \`create table if not exists\` implicito via
--- ordem — se ja existirem com outro shape, derrube o schema antes em vez de
--- confiar neste script para migrar dado existente.
+-- ESTE SCRIPT ESPERA UM BANCO VAZIO (schema public sem as tabelas do PipeFlow).
+--
+-- Enums, policies e triggers estao protegidos contra reexecucao, mas os
+-- \`create table\` NAO: se as tabelas ja existirem, o script para na primeira
+-- com "relation already exists". Isso e proposital — um script que engolisse
+-- tabela existente daria a impressao de ter aplicado o schema novo enquanto
+-- deixasse o antigo no lugar, e o erro so apareceria depois, na aplicacao.
+--
+-- Se precisar reaplicar do zero num banco de DESENVOLVIMENTO, rode antes o
+-- reset comentado no fim deste cabecalho. Ele APAGA TODOS OS DADOS.
 --
 -- NAO inclui o seed. Dados de desenvolvimento estao em supabase/seed.sql e
 -- nao devem ir para um banco com dados reais.
 -- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- RESET — descomente APENAS em banco de desenvolvimento.
+--
+-- Apaga as 8 tabelas do PipeFlow, os enums, as funcoes e os usuarios de teste.
+-- Nao ha desfazer. Em banco com dado real, isto destroi o dado real.
+-- -----------------------------------------------------------------------------
+
+-- drop table if exists public.activities        cascade;
+-- drop table if exists public.deals             cascade;
+-- drop table if exists public.leads             cascade;
+-- drop table if exists public.invites           cascade;
+-- drop table if exists public.subscriptions     cascade;
+-- drop table if exists public.workspace_members cascade;
+-- drop table if exists public.workspaces        cascade;
+-- drop table if exists public.profiles          cascade;
+--
+-- drop function if exists public.is_workspace_member(uuid)              cascade;
+-- drop function if exists public.is_workspace_admin(uuid)               cascade;
+-- drop function if exists public.shares_workspace_with(uuid)            cascade;
+-- drop function if exists public.pipeflow_normalize(text)               cascade;
+-- drop function if exists public.handle_new_user()                      cascade;
+-- drop function if exists public.handle_user_update()                   cascade;
+-- drop function if exists public.handle_new_workspace()                 cascade;
+-- drop function if exists public.touch_updated_at()                     cascade;
+-- drop function if exists public.protect_workspace_owner()              cascade;
+-- drop function if exists public.assert_deal_lead_same_workspace()      cascade;
+-- drop function if exists public.assert_activity_lead_same_workspace()  cascade;
+--
+-- drop type if exists public.invite_status       cascade;
+-- drop type if exists public.subscription_status cascade;
+-- drop type if exists public.activity_type       cascade;
+-- drop type if exists public.deal_stage          cascade;
+-- drop type if exists public.lead_status         cascade;
+-- drop type if exists public.plan                cascade;
+-- drop type if exists public.role                cascade;
+--
+-- Usuarios de teste do seed (so existem em desenvolvimento):
+-- delete from auth.users where email like '%@lumiar.com.br'
+--                          or email like '%@vertex.com.br';
 
 `;
 
