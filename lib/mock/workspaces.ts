@@ -1,10 +1,17 @@
 import type { Subscription, Workspace, WorkspaceMember } from "@/types";
 
+import { DEMO_WORKSPACES } from "./identity";
 import { users } from "./users";
 
+/**
+ * Os ids são os dos workspaces reais criados pelo onboarding (ver
+ * `identity.ts`) — é isso que faz os leads e negócios abaixo aparecerem ao
+ * entrar com as contas de teste. Nome e plano continuam de demonstração: o
+ * switcher e o cabeçalho leem do banco, não daqui.
+ */
 export const workspaces: Workspace[] = [
   {
-    id: "b0000000-0000-4000-8000-000000000001",
+    id: DEMO_WORKSPACES.marina,
     name: "Lumiar Digital",
     slug: "lumiar-digital",
     owner_id: users[0].id,
@@ -12,7 +19,7 @@ export const workspaces: Workspace[] = [
     created_at: "2026-02-10T13:00:00.000Z",
   },
   {
-    id: "b0000000-0000-4000-8000-000000000002",
+    id: DEMO_WORKSPACES.diego,
     name: "Vertex Consultoria",
     slug: "vertex-consultoria",
     owner_id: users[3].id,

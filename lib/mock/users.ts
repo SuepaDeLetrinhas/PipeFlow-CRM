@@ -1,35 +1,48 @@
 import type { User } from "@/types";
 
+import { DEMO_USERS } from "./identity";
+
 /**
- * Perfis de usuário. No M9 estes registros vêm de `auth.users` + tabela de
- * perfis; o shape (id, full_name, email, avatar_url) já é o mesmo.
+ * Perfis de usuário para a demonstração.
+ *
+ * Marina e Diego usam os ids das contas reais (ver `identity.ts`), para que os
+ * leads e negócios atribuídos a eles apareçam quando se entra com essas contas.
+ * Rafael e Camila seguem fictícios: existem para a lista de responsáveis ter
+ * mais de um nome, e não precisam de conta no Auth porque estas telas ainda
+ * leem de `lib/mock/`.
+ *
+ * O usuário logado de verdade vem de `getCurrentUser()`, que consulta a sessão
+ * do Supabase — não daqui.
  */
 export const users: User[] = [
   {
-    id: "a0000000-0000-4000-8000-000000000001",
+    id: DEMO_USERS.marina,
     full_name: "Marina Duarte",
-    email: "marina@lumiar.com.br",
+    email: "marina.teste@pipeflow.dev",
     avatar_url: null,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000002",
+    id: DEMO_USERS.rafael,
     full_name: "Rafael Nogueira",
     email: "rafael@lumiar.com.br",
     avatar_url: null,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000003",
+    id: DEMO_USERS.camila,
     full_name: "Camila Souza",
     email: "camila@lumiar.com.br",
     avatar_url: null,
   },
   {
-    id: "a0000000-0000-4000-8000-000000000004",
+    id: DEMO_USERS.diego,
     full_name: "Diego Ferraz",
-    email: "diego@vertex.com.br",
+    email: "diego.teste@pipeflow.dev",
     avatar_url: null,
   },
 ];
 
-/** Usuário "logado" enquanto não existe autenticação real (M9). */
+/**
+ * Mantido só para os fixtures que ainda o referenciam. A área logada usa
+ * `getCurrentUser()`, que lê a sessão real.
+ */
 export const currentUser: User = users[0];
