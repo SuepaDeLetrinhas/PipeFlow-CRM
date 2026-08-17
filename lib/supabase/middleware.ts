@@ -6,12 +6,32 @@ import { env } from "@/lib/env";
 import type { Database } from "@/types/database";
 
 /**
- * Refresh do cookie de sessão a cada request. Sem isso o token expira e o
- * usuário cai para fora em Server Components, que não podem escrever cookie.
+ * Refresh do cookie de sessão a cada request + proteção de rotas.
  *
- * A proteção de rotas entra no M9 — hoje o app roda sobre fixtures e não há
- * login real; redirecionar agora deixaria a área logada inacessível.
+ * Sem o refresh o token expira e o usuário cai para fora em Server Components,
+ * que não podem escrever cookie.
  */
+
+/** Área logada: exige sessão. */
+const APP_ROUTES = ["/dashboard", "/leads", "/pipeline", "/settings"];
+
+/** Telas de entrada: quem já está logado não tem o que fazer aqui. */
+const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];
+
+/**
+ * `/callback` e `/reset-password` ficam de fora das duas listas de propósito.
+ *
+ * Quem clica no link de redefinição chega COM sessão (o callback acabou de
+ * criá-la). Tratar `/reset-password` como rota de auth mandaria essa pessoa
+ * para o dashboard, tornando impossível redefinir a senha pelo e-mail.
+ */
+
+function matches(pathname: string, routes: string[]) {
+  return routes.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -38,9 +58,35 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Revalida o token e reemite os cookies. Não remover: é o efeito colateral
-  // que mantém a sessão viva.
-  await supabase.auth.getUser();
+  // `getUser()`, não `getSession()`: o primeiro valida o JWT contra o servidor
+  // do Auth, o segundo apenas lê o cookie — que o cliente pode forjar. Numa
+  // decisão de autorização, ler o cookie sem validar não protege nada.
+  //
+  // A chamada também é o efeito colateral que renova a sessão. Não remover.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname, search } = request.nextUrl;
+
+  if (!user && matches(pathname, APP_ROUTES)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    // Preserva o destino para voltar depois do login: quem clicou num link
+    // direto de lead volta ao lead, não ao dashboard.
+    url.searchParams.set("next", `${pathname}${search}`);
+
+    return NextResponse.redirect(url);
+  }
+
+  if (user && matches(pathname, AUTH_ROUTES)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    url.search = "";
+
+    return NextResponse.redirect(url);
+  }
 
   return response;
 }

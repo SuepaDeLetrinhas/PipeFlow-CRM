@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { signInSchema, type SignInInput } from "@/lib/validations/auth";
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [pending, startTransition] = React.useTransition();
   const [formError, setFormError] = React.useState<string | null>(null);
 
@@ -34,7 +34,7 @@ export function LoginForm() {
     setFormError(null);
 
     startTransition(async () => {
-      const result = await signInAction(values);
+      const result = await signInAction(values, next);
 
       // Em caso de sucesso a action redireciona e nada abaixo executa.
       for (const [field, message] of Object.entries(result.fieldErrors ?? {})) {
