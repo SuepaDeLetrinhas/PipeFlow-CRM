@@ -2,7 +2,6 @@ import { cache } from "react";
 
 import { cookies } from "next/headers";
 
-import { subscriptions } from "@/lib/mock/workspaces";
 import { createClient } from "@/lib/supabase/server";
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie";
 import type {
@@ -13,8 +12,8 @@ import type {
 } from "@/types";
 
 /**
- * Camada de acesso a dados. Usuário logado e workspaces vêm do banco; membros e
- * assinatura seguem em fixtures até as telas do M7/M10 que os consomem.
+ * Camada de acesso a dados de workspace. Tudo aqui vem do banco desde o M11 —
+ * `lib/mock/` não é mais importado por nenhuma função de leitura.
  */
 
 /**
@@ -168,14 +167,32 @@ export async function getMembers(): Promise<WorkspaceMember[]> {
   });
 }
 
+/**
+ * Assinatura do workspace ativo.
+ *
+ * Todo workspace nasce com uma linha no plano Free — o trigger
+ * `handle_new_workspace` do M8 garante isso —, então `null` aqui significa
+ * workspace inexistente, não "sem assinatura". Quem checa limite trata a
+ * ausência como Free, que é o mais restritivo.
+ *
+ * Somente leitura por construção: `subscriptions` não tem policy de
+ * insert/update para `authenticated`. Quem escreve é o webhook do Stripe com a
+ * service-role, no M14.
+ */
 export async function getSubscription(): Promise<Subscription | null> {
   const workspace = await getCurrentWorkspace();
 
   if (!workspace) return null;
 
-  return (
-    subscriptions.find(
-      (subscription) => subscription.workspace_id === workspace.id,
-    ) ?? null
-  );
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("subscriptions")
+    .select(
+      "id, workspace_id, stripe_customer_id, stripe_subscription_id, status, plan, current_period_end, created_at, updated_at",
+    )
+    .eq("workspace_id", workspace.id)
+    .maybeSingle();
+
+  return data ?? null;
 }

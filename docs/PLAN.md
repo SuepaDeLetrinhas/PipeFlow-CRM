@@ -312,7 +312,12 @@ tabelas inteiras segurando lock.
    registra nada na tabela de controle, então `supabase migration list` mostra
    as migrations com `remote: ""`. Um `db:push` futuro tentaria reaplicar tudo e
    falharia em `relation already exists`. Corrige-se com
-   `supabase migration repair --status applied 20260817120000 20260817120100 20260817120200 20260817130000`.
+   `supabase migration repair --status applied 20260817120000 20260817120100 20260817120200 20260817130000 20260817140000 20260817140100`.
+
+   As duas do M11/M12/M13 (`20260817140000`, `20260817140100`) entram na mesma
+   lista: foram aplicadas por `supabase db query --linked --file`, que executa o
+   SQL mas também não registra nada no histórico. A dívida não cresceu em
+   natureza, só em número de arquivos.
 
 ---
 
@@ -394,52 +399,146 @@ workspace que **tinha sido criado**. Só apareceu rodando; compilava sem erro.
 
 ### M11 · Leads e atividades reais
 
-**Branch:** `feat/m11-leads-backend`
+**Branch:** `feat/leads-data` (o plano previa `feat/m11-leads-backend`; M11, M12 e
+M13 saíram juntos na mesma branch — ver nota no fim do M13)
 
 **Objetivo:** telas do M4 escrevendo e lendo do Postgres.
 
-- [ ] Server Actions de criar, editar e excluir lead, com Zod e `revalidatePath`
-- [ ] Listagem com busca, filtros e paginação executados no banco
-- [ ] Índice de busca textual em nome, e-mail e empresa
-- [ ] Detalhe do lead carregando de query real
-- [ ] Server Action de criar atividade; timeline lendo do banco
-- [ ] Limite de 50 leads do plano Free verificado no servidor antes do insert
-- [ ] Tratamento de erro com toast e mensagens por campo
+- [x] Server Actions de criar, editar e excluir lead, com Zod e `revalidatePath`
+- [x] Listagem com busca, filtros e paginação executados no banco
+- [x] Índice de busca textual em nome, e-mail e empresa
+- [x] Detalhe do lead carregando de query real
+- [x] Server Action de criar atividade; timeline lendo do banco
+- [x] Limite de 50 leads do plano Free verificado no servidor antes do insert
+- [x] Tratamento de erro com toast e mensagens por campo
 
 **Commit final:** `feat: CRUD de leads e atividades persistido no Supabase`
+
+**Colunas geradas para a busca** (`20260817140000`). Os índices do M8 foram
+criados sobre *expressões* — `pipeflow_normalize(name || company || email)` e
+`regexp_replace(phone, '\D', '', 'g')`. O PostgREST, porém, só filtra por
+**coluna**: não há como referenciar uma expressão dentro de um `.or()`. Os
+índices existiam e eram inalcançáveis a partir do cliente, e a busca teria de
+voltar para o Node — trazendo a tabela inteira a cada tecla digitada. `leads`
+ganhou duas colunas `generated always as (...) stored`, `search_text` e
+`phone_digits`, com os índices GIN recriados sobre elas.
+
+As duas ficam **fora do tipo `Lead`** (`Omit<Tables<"leads">, …>`): são plumbing
+de busca, não dado de domínio, e expô-las obrigaria todo lugar que monta um lead
+a inventar valor para coluna que o banco calcula sozinho.
+
+**Fixtures retipados pelos tipos gerados** — a dívida que o M8 deixou aberta.
+`types/index.ts` agora deriva de `types/database.ts` (`Tables<"leads">`) em vez
+de repetir o shape à mão. A divergência virou erro de compilação na hora, como o
+PLAN.md previa, e apareceram três: `Lead` e `Deal` sem `updated_at`, `Activity`
+sem `created_at`, e **`Activity.author_id` declarado como `string` sendo
+nullable no banco** (`on delete set null`). O terceiro era bug de verdade: a
+timeline de um lead cujo autor saiu da equipe quebraria em
+`authors.get(activity.author_id)`.
+
+**A checagem de limite tem de estar na action, e está.** Verificado contra o
+banco: com o workspace em 50 leads, um insert direto pelo PostgREST é
+**aceito** — o teto do plano Free é regra de produto, não de RLS. Quem o aplica
+é `createLeadAction`, antes do insert. Esconder o botão na UI é conveniência.
+
+**Bug encontrado testando: curinga vazando na busca.** Dentro de um `.or()` o
+curinga do PostgREST é o **asterisco**, não o `%` do LIKE. A primeira versão
+escapava `%` e `_` — a sintaxe errada — e deixava o `*` passar: buscar `*`
+devolvia a tabela inteira, e "a*a" casava "Alfa" por wildcard. Só apareceu
+exercitando a busca contra o banco com termos hostis; compilava e passava nos
+casos normais. `escapeSearchTerm()` converte `*` e `%` num `%` escapado, e
+nenhum dos dois volta a agir como curinga.
 
 ---
 
 ### M12 · Pipeline persistido
 
-**Branch:** `feat/m12-pipeline-backend`
+**Branch:** `feat/leads-data`
 
 **Objetivo:** drag-and-drop do M5 gravando no banco.
 
-- [ ] Server Actions de criar, editar e excluir negócio
-- [ ] Mover negócio grava `stage` e `position`; reordenação dentro da coluna persiste
-- [ ] Update otimista com rollback em caso de erro
-- [ ] Negócios carregados por workspace com o lead e o responsável em join
-- [ ] Vincular negócio a lead existente no formulário
-- [ ] Negócios do lead na página de detalhe vindo do banco
+- [x] Server Actions de criar, editar e excluir negócio
+- [x] Mover negócio grava `stage` e `position`; reordenação dentro da coluna persiste
+- [x] Update otimista com rollback em caso de erro
+- [x] Negócios carregados por workspace com o lead e o responsável em join
+- [x] Vincular negócio a lead existente no formulário
+- [x] Negócios do lead na página de detalhe vindo do banco
 
 **Commit final:** `feat: persistência do pipeline e reordenação de negócios`
+
+**`move_deal` é função do Postgres, não uma sequência de updates.** Reordenar
+mexe em várias linhas: tirar o card da origem fecha o buraco que ele deixou,
+colocá-lo no destino abre espaço. Numa sequência de updates soltos, uma falha no
+meio deixa a coluna com posições duplicadas — e o board seguinte carrega numa
+ordem que ninguém pediu. Dentro da função é uma transação só.
+
+Ela **não é `security definer`**, ao contrário das funções de apoio do M8: roda
+com os privilégios de quem chama e portanto sob RLS, então não alcança negócio
+de outro workspace. Marcar como definer contornaria justamente o isolamento que
+o M8 construiu, sem necessidade — a função não precisa de privilégio extra.
+
+`for update` na linha do card serializa dois arrastes simultâneos, e a posição
+recebida do cliente é fixada no intervalo válido (`greatest(0, least(…))`):
+posição forjada ou defasada — outra pessoa mexeu na coluna no meio do gesto —
+cai no fim da coluna em vez de abrir buraco. Verificado com `position: 999`.
+
+**`moveDealAction` não revalida `/pipeline`**, de propósito: o `revalidatePath`
+descartaria o estado otimista e o card voltaria visualmente à posição antiga por
+um instante. Revalida `/dashboard`, esse sim — mover para Ganho/Perdido muda a
+conversão e o valor do pipeline, e aquela tela não tem estado otimista a
+preservar.
+
+**Posição do card novo vem do banco** (`next_deal_position`): ler o maior
+`position` no Node e inserir com ele + 1 abriria corrida entre dois usuários
+criando ao mesmo tempo.
 
 ---
 
 ### M13 · Dashboard com dados reais
 
-**Branch:** `feat/m13-dashboard-backend`
+**Branch:** `feat/leads-data`
 
 **Objetivo:** métricas calculadas no banco, não no cliente.
 
-- [ ] Queries agregadas (views ou funções Postgres) para as 4 métricas
-- [ ] Dados do funil agregados por etapa
-- [ ] Negócios com prazo próximo filtrados por usuário logado e janela de dias
-- [ ] Métricas escopadas ao workspace ativo e respeitando RLS
-- [ ] Streaming com Suspense por card, mantendo os skeletons do M6
+- [x] Queries agregadas (views ou funções Postgres) para as 4 métricas
+- [x] Dados do funil agregados por etapa
+- [x] Negócios com prazo próximo filtrados por usuário logado e janela de dias
+- [x] Métricas escopadas ao workspace ativo e respeitando RLS
+- [x] Streaming com Suspense por card, mantendo os skeletons do M6
 
 **Commit final:** `feat: métricas do dashboard calculadas no Postgres`
+
+**Uma função para os quatro cards, não quatro** (`dashboard_metrics`): os
+números saem do mesmo conjunto de linhas, e separá-los faria o Postgres varrer
+`deals` três vezes para responder a uma tela só. `count(*) filter (where …)`
+resolve tudo numa passada.
+
+**O funil usa `left join` contra a lista de etapas**, para etapa vazia devolver
+linha com zero em vez de sumir do gráfico — etapa vazia é informação. Ganho e
+Perdido continuam fora, pela decisão registrada no M6.
+
+**"Prazo próximo" traz responsável e lead em join**, em vez de buscar a lista de
+membros e a de leads inteiras para casar dois ids em memória: eram dois
+conjuntos completos transferidos para exibir seis linhas.
+
+**Sobre `numeric` e `bigint`:** o roteiro previa que o PostgREST os entregasse
+como string. Verificado contra o banco (Postgres 17 / PostgREST 14) — chegam
+como `number`. As conversões com `Number()` ficaram como rede de segurança e os
+comentários dizem isso, em vez de afirmar um problema que não se confirmou.
+
+---
+
+**Nota sobre a branch única.** M11, M12 e M13 saíram juntos em `feat/leads-data`.
+Os três mexem na mesma camada (`lib/data/` + Server Actions) e negócio referencia
+lead: separá-los criaria uma janela em que o board lê fixture e a página do lead
+lê banco, com ids que não casam. O PLAN.md os mantém como milestones distintos
+porque a divisão continua descrevendo o produto; o que mudou foi a entrega.
+
+**`lib/mock/` continua no repositório**, embora nenhuma função de leitura o
+importe mais. Ele é a fonte de `npm run db:seed`, o único caminho para popular um
+banco de desenvolvimento — o remoto está marcado `PRODUCTION` e nunca recebeu o
+seed. Os fixtures foram retipados junto com o resto e compilam contra o schema
+real; apagá-los é decisão para quando o seed tiver outra origem.
 
 ---
 

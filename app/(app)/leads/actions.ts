@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import {
-  simulateLatency,
-  toFieldErrors,
-  type ActionResult,
-} from "@/lib/actions/result";
+import { toFieldErrors, type ActionResult } from "@/lib/actions/result";
+import { FREE_PLAN_LIMITS } from "@/lib/constants";
+import { countLeads } from "@/lib/data/leads";
+import { getCurrentUser, getCurrentWorkspace, getSubscription } from "@/lib/data/workspaces";
+import { createClient } from "@/lib/supabase/server";
 import {
   activitySchema,
   leadIdSchema,
@@ -14,18 +14,34 @@ import {
 } from "@/lib/validations/lead";
 
 /**
- * Server Actions de leads e atividades — stubs.
+ * Server Actions de leads e atividades — gravando no Supabase desde o M11.
  *
- * A validação com Zod já é a definitiva. O M9 troca o corpo depois do `parse`
- * por inserts no Supabase; as telas e as assinaturas não mudam.
+ * Três regras valem em todas elas:
  *
- * Como as fixtures são um módulo em memória, escrever nelas não sobreviveria ao
- * próximo request e daria a impressão falsa de persistência. Por isso as actions
- * validam, avisam e não gravam nada até o M9.
+ * 1. **O `workspace_id` vem do servidor**, nunca do payload. Aceitá-lo do
+ *    cliente ofereceria ao atacante exatamente o campo que precisa forjar para
+ *    escrever na empresa alheia — a RLS barraria, mas a intenção do código já
+ *    estaria errada.
+ * 2. **A validação Zod é a mesma do cliente**, e aqui ela é lei: o formulário
+ *    valida por conveniência, esta camada por segurança.
+ * 3. **Erro do banco não vaza para a tela.** O usuário recebe uma frase útil; o
+ *    detalhe (código do Postgres, nome de constraint) fica no log do servidor.
  */
 
-const PENDENTE_M9 =
-  "Formulário validado. A gravação entra no M9, quando o Supabase substituir as fixtures.";
+/** Falha genérica de escrita, com o detalhe registrado só no servidor. */
+function writeFailure(context: string, error: unknown): ActionResult {
+  console.error(`[leads] ${context}:`, error);
+
+  return {
+    ok: false,
+    message: "Não foi possível salvar. Tente de novo em alguns instantes.",
+  };
+}
+
+const SEM_WORKSPACE: ActionResult = {
+  ok: false,
+  message: "Nenhum workspace ativo. Recarregue a página e tente de novo.",
+};
 
 export async function createLeadAction(input: unknown): Promise<ActionResult> {
   const parsed = leadSchema.safeParse(input);
@@ -38,13 +54,42 @@ export async function createLeadAction(input: unknown): Promise<ActionResult> {
     };
   }
 
-  await simulateLatency();
+  const workspace = await getCurrentWorkspace();
 
-  // M9: checar FREE_PLAN_LIMITS.leads no servidor antes do insert, e então
-  // supabase.from("leads").insert({ ...parsed.data, workspace_id })
+  if (!workspace) return SEM_WORKSPACE;
+
+  // Limite do plano Free checado NO SERVIDOR antes do insert. A tela do M7
+  // também esconde o botão ao atingir o teto, mas isso é conveniência: quem
+  // chamar a action direto passaria por cima.
+  const subscription = await getSubscription();
+  // Ausência de assinatura é tratada como Free — o mais restritivo.
+  const plan = subscription?.plan ?? "free";
+
+  if (plan === "free") {
+    const total = await countLeads();
+
+    if (total >= FREE_PLAN_LIMITS.leads) {
+      return {
+        ok: false,
+        message: `O plano Free permite ${FREE_PLAN_LIMITS.leads} leads. Faça upgrade para o Pro para cadastrar mais.`,
+      };
+    }
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase.from("leads").insert({
+    ...parsed.data,
+    workspace_id: workspace.id,
+  });
+
+  if (error) return writeFailure("createLead", error);
+
   revalidatePath("/leads");
+  // O dashboard conta leads; sem isto o card ficaria com o número velho.
+  revalidatePath("/dashboard");
 
-  return { ok: true, message: PENDENTE_M9 };
+  return { ok: true, message: "Lead cadastrado." };
 }
 
 export async function updateLeadAction(
@@ -65,38 +110,62 @@ export async function updateLeadAction(
     };
   }
 
-  await simulateLatency();
+  const supabase = await createClient();
 
-  // M9: supabase.from("leads").update(parsed.data).eq("id", id)
   // O `workspace_id` não entra no update: a RLS é que decide se a linha é
   // visível, e mandá-lo do cliente seria oferecer ao atacante o campo a forjar.
+  const { error, count } = await supabase
+    .from("leads")
+    .update(parsed.data, { count: "exact" })
+    .eq("id", id);
+
+  if (error) return writeFailure("updateLead", error);
+
+  // Zero linhas afetadas com update válido = a RLS filtrou a linha. Lead de
+  // outro workspace responde igual a lead inexistente: não confirmamos que o
+  // id existe em algum lugar.
+  if (count === 0) {
+    return { ok: false, message: "Lead não encontrado." };
+  }
+
   revalidatePath(`/leads/${id}`);
   revalidatePath("/leads");
+  revalidatePath("/pipeline");
 
-  return { ok: true, message: PENDENTE_M9 };
+  return { ok: true, message: "Lead atualizado." };
 }
 
 export async function deleteLeadAction(id: string): Promise<ActionResult> {
   // O id vem do cliente: sem validar, um `id` forjado seguiria direto para a
-  // query do M9.
+  // query.
   const parsed = leadIdSchema.safeParse(id);
 
   if (!parsed.success) {
     return { ok: false, message: "Lead inválido." };
   }
 
-  await simulateLatency();
+  const supabase = await createClient();
 
-  // M9: supabase.from("leads").delete().eq("id", id) — as atividades e negócios
-  // vinculados caem por `on delete cascade` na migration.
+  // As atividades caem por `on delete cascade`; os negócios sobrevivem com
+  // `lead_id` nulo (`on delete set null`), porque o valor já fechado continua
+  // valendo para o funil.
+  const { error, count } = await supabase
+    .from("leads")
+    .delete({ count: "exact" })
+    .eq("id", parsed.data);
+
+  if (error) return writeFailure("deleteLead", error);
+
+  if (count === 0) {
+    return { ok: false, message: "Lead não encontrado." };
+  }
+
   revalidatePath(`/leads/${id}`);
   revalidatePath("/leads");
+  revalidatePath("/pipeline");
+  revalidatePath("/dashboard");
 
-  return {
-    ok: true,
-    message:
-      "Exclusão validada. A remoção real entra no M9, junto com o cascade no banco.",
-  };
+  return { ok: true, message: "Lead excluído." };
 }
 
 export async function createActivityAction(
@@ -112,10 +181,27 @@ export async function createActivityAction(
     };
   }
 
-  await simulateLatency();
+  const [workspace, user] = await Promise.all([
+    getCurrentWorkspace(),
+    getCurrentUser(),
+  ]);
 
-  // M9: supabase.from("activities").insert({ ...parsed.data, workspace_id, author_id })
+  if (!workspace) return SEM_WORKSPACE;
+
+  const supabase = await createClient();
+
+  // `author_id` vem da sessão, não do formulário: a policy de insert exige
+  // `author_id = auth.uid()` justamente para ninguém registrar uma ligação em
+  // nome de outra pessoa.
+  const { error } = await supabase.from("activities").insert({
+    ...parsed.data,
+    workspace_id: workspace.id,
+    author_id: user.id,
+  });
+
+  if (error) return writeFailure("createActivity", error);
+
   revalidatePath(`/leads/${parsed.data.lead_id}`);
 
-  return { ok: true, message: PENDENTE_M9 };
+  return { ok: true, message: "Atividade registrada." };
 }

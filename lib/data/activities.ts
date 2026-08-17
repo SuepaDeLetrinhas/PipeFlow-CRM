@@ -1,4 +1,4 @@
-import { activities } from "@/lib/mock/activities";
+import { createClient } from "@/lib/supabase/server";
 import type { Activity } from "@/types";
 
 import { getCurrentWorkspace } from "./workspaces";
@@ -11,10 +11,21 @@ export async function getActivitiesByLead(
 
   if (!workspace) return [];
 
-  return activities
-    .filter(
-      (activity) =>
-        activity.workspace_id === workspace.id && activity.lead_id === leadId,
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("activities")
+    .select(
+      "id, workspace_id, lead_id, type, description, author_id, occurred_at, created_at",
     )
-    .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    .eq("workspace_id", workspace.id)
+    .eq("lead_id", leadId)
+    // O índice `activities_lead_id_occurred_at_idx` do M8 é exatamente
+    // `(lead_id, occurred_at desc)`, então esta ordenação sai dele.
+    .order("occurred_at", { ascending: false })
+    // Duas atividades no mesmo instante (importação, registro em lote) ficariam
+    // em ordem indefinida sem desempate.
+    .order("id", { ascending: true });
+
+  return data ?? [];
 }

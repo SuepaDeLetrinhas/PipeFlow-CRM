@@ -20,6 +20,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: marina,
     created_at: "2026-06-02T12:15:00.000Z",
+    updated_at: "2026-06-02T12:15:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000002",
@@ -32,6 +33,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: rafael,
     created_at: "2026-06-09T14:40:00.000Z",
+    updated_at: "2026-06-09T14:40:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000003",
@@ -44,6 +46,7 @@ export const leads: Lead[] = [
     status: "cliente",
     owner_id: marina,
     created_at: "2026-04-18T10:05:00.000Z",
+    updated_at: "2026-04-18T10:05:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000004",
@@ -56,6 +59,7 @@ export const leads: Lead[] = [
     status: "novo",
     owner_id: camila,
     created_at: "2026-08-03T19:20:00.000Z",
+    updated_at: "2026-08-03T19:20:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000005",
@@ -68,6 +72,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: camila,
     created_at: "2026-07-21T16:00:00.000Z",
+    updated_at: "2026-07-21T16:00:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000006",
@@ -80,6 +85,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: rafael,
     created_at: "2026-07-08T13:10:00.000Z",
+    updated_at: "2026-07-08T13:10:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000007",
@@ -92,6 +98,7 @@ export const leads: Lead[] = [
     status: "perdido",
     owner_id: marina,
     created_at: "2026-05-14T11:35:00.000Z",
+    updated_at: "2026-05-14T11:35:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000008",
@@ -104,6 +111,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: rafael,
     created_at: "2026-07-30T15:25:00.000Z",
+    updated_at: "2026-07-30T15:25:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000009",
@@ -116,6 +124,7 @@ export const leads: Lead[] = [
     status: "novo",
     owner_id: camila,
     created_at: "2026-08-10T18:45:00.000Z",
+    updated_at: "2026-08-10T18:45:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000010",
@@ -128,6 +137,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: marina,
     created_at: "2026-06-25T09:50:00.000Z",
+    updated_at: "2026-06-25T09:50:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000011",
@@ -140,6 +150,7 @@ export const leads: Lead[] = [
     status: "cliente",
     owner_id: camila,
     created_at: "2026-03-27T14:15:00.000Z",
+    updated_at: "2026-03-27T14:15:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000012",
@@ -152,6 +163,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: rafael,
     created_at: "2026-07-15T12:30:00.000Z",
+    updated_at: "2026-07-15T12:30:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000013",
@@ -164,6 +176,7 @@ export const leads: Lead[] = [
     status: "novo",
     owner_id: marina,
     created_at: "2026-08-11T13:05:00.000Z",
+    updated_at: "2026-08-11T13:05:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000014",
@@ -176,6 +189,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: camila,
     created_at: "2026-06-30T17:40:00.000Z",
+    updated_at: "2026-06-30T17:40:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000015",
@@ -188,6 +202,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: marina,
     created_at: "2026-07-02T11:55:00.000Z",
+    updated_at: "2026-07-02T11:55:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000016",
@@ -200,6 +215,7 @@ export const leads: Lead[] = [
     status: "perdido",
     owner_id: rafael,
     created_at: "2026-05-06T10:20:00.000Z",
+    updated_at: "2026-05-06T10:20:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000017",
@@ -212,6 +228,7 @@ export const leads: Lead[] = [
     status: "novo",
     owner_id: camila,
     created_at: "2026-08-12T14:10:00.000Z",
+    updated_at: "2026-08-12T14:10:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000018",
@@ -224,6 +241,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: rafael,
     created_at: "2026-07-24T09:15:00.000Z",
+    updated_at: "2026-07-24T09:15:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000019",
@@ -236,6 +254,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: marina,
     created_at: "2026-06-17T15:35:00.000Z",
+    updated_at: "2026-06-17T15:35:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000020",
@@ -248,6 +267,7 @@ export const leads: Lead[] = [
     status: "cliente",
     owner_id: camila,
     created_at: "2026-04-09T13:45:00.000Z",
+    updated_at: "2026-04-09T13:45:00.000Z",
   },
 
   // Workspace 2 — existe só para provar o isolamento por workspace_id.
@@ -262,6 +282,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: diego,
     created_at: "2026-06-11T16:25:00.000Z",
+    updated_at: "2026-06-11T16:25:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000022",
@@ -274,6 +295,7 @@ export const leads: Lead[] = [
     status: "novo",
     owner_id: diego,
     created_at: "2026-08-05T10:00:00.000Z",
+    updated_at: "2026-08-05T10:00:00.000Z",
   },
   // A Vertex tinha só dois leads, o que deixava a tabela, os filtros e o
   // dashboard sem nada para mostrar a quem entra com a conta do Diego. Os
@@ -290,6 +312,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: diego,
     created_at: "2026-07-02T09:30:00.000Z",
+    updated_at: "2026-07-02T09:30:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000024",
@@ -302,6 +325,7 @@ export const leads: Lead[] = [
     status: "cliente",
     owner_id: diego,
     created_at: "2026-05-28T14:10:00.000Z",
+    updated_at: "2026-05-28T14:10:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000025",
@@ -314,6 +338,7 @@ export const leads: Lead[] = [
     status: "contatado",
     owner_id: diego,
     created_at: "2026-07-19T11:45:00.000Z",
+    updated_at: "2026-07-19T11:45:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000026",
@@ -326,6 +351,7 @@ export const leads: Lead[] = [
     status: "qualificado",
     owner_id: diego,
     created_at: "2026-08-01T15:20:00.000Z",
+    updated_at: "2026-08-01T15:20:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000027",
@@ -338,6 +364,7 @@ export const leads: Lead[] = [
     status: "perdido",
     owner_id: diego,
     created_at: "2026-06-24T10:05:00.000Z",
+    updated_at: "2026-06-24T10:05:00.000Z",
   },
   {
     id: "c0000000-0000-4000-8000-000000000028",
@@ -350,5 +377,6 @@ export const leads: Lead[] = [
     status: "novo",
     owner_id: diego,
     created_at: "2026-08-12T08:50:00.000Z",
+    updated_at: "2026-08-12T08:50:00.000Z",
   },
 ];

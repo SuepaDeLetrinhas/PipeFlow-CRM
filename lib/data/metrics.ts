@@ -1,17 +1,15 @@
 import { DEAL_STAGES } from "@/lib/constants";
+import { createClient } from "@/lib/supabase/server";
 import type { Deal, DealStage, Lead, User } from "@/types";
 
-import { getDeals, getOpenDeals } from "./deals";
-import { getLeads } from "./leads";
-import { getMembers } from "./workspaces";
+import { getCurrentWorkspace } from "./workspaces";
 
 /**
- * Leituras do dashboard.
+ * Leituras do dashboard — agregadas no Postgres desde o M13.
  *
- * Tudo que a tela mostra é calculado aqui, nunca no componente: no M13 estes
- * corpos viram queries agregadas no Postgres (views ou funções) e as
- * assinaturas continuam as mesmas. Por isso cada função devolve o formato
- * final de exibição, já ordenado e já somado.
+ * Cada função devolve o formato final de exibição, já ordenado e já somado: a
+ * tela nunca calcula. As assinaturas são as do M6; o que mudou é que a soma
+ * acontece no banco, sem transferir as linhas para contá-las aqui.
  */
 
 export interface DashboardMetrics {
@@ -26,27 +24,39 @@ export interface DashboardMetrics {
   wonDeals: number;
 }
 
+const EMPTY_METRICS: DashboardMetrics = {
+  totalLeads: 0,
+  openDeals: 0,
+  pipelineValue: 0,
+  conversionRate: 0,
+  closedDeals: 0,
+  wonDeals: 0,
+};
+
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
-  const [leads, deals, openDeals] = await Promise.all([
-    getLeads(),
-    getDeals(),
-    getOpenDeals(),
-  ]);
+  const workspace = await getCurrentWorkspace();
 
-  const pipelineValue = openDeals.reduce((total, deal) => total + deal.value, 0);
+  if (!workspace) return EMPTY_METRICS;
 
-  const wonDeals = deals.filter(
-    (deal) => deal.stage === "fechado_ganho",
-  ).length;
-  const lostDeals = deals.filter(
-    (deal) => deal.stage === "fechado_perdido",
-  ).length;
-  const closedDeals = wonDeals + lostDeals;
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .rpc("dashboard_metrics", { target_workspace_id: workspace.id })
+    .maybeSingle();
+
+  if (!data) return EMPTY_METRICS;
+
+  // `count()` devolve bigint e `sum()` devolve numeric. Verificado contra o
+  // banco: os dois chegam como `number` nas grandezas do PipeFlow. O `Number()`
+  // é rede de segurança — bigint acima do inteiro seguro do JS viria como
+  // string, e uma divisão sobre string devolveria NaN na taxa de conversão.
+  const wonDeals = Number(data.won_deals);
+  const closedDeals = Number(data.closed_deals);
 
   return {
-    totalLeads: leads.length,
-    openDeals: openDeals.length,
-    pipelineValue,
+    totalLeads: Number(data.total_leads),
+    openDeals: Number(data.open_deals),
+    pipelineValue: Number(data.pipeline_value),
     // Mede eficiência de fechamento, não do funil inteiro: negócio ainda em
     // aberto não é fracasso, então fica fora do denominador.
     conversionRate: closedDeals > 0 ? (wonDeals / closedDeals) * 100 : 0,
@@ -73,24 +83,28 @@ const FUNNEL_STAGES = DEAL_STAGES.filter(
  * Ganho e Perdido não entram: o funil mostra o caminho até o fechamento, e
  * empilhar os desfechos junto faria as barras contarem duas vezes o mesmo
  * negócio ao longo do tempo. Toda etapa aparece mesmo com zero — etapa vazia é
- * informação, não ausência.
+ * informação, não ausência (o `left join` da função SQL garante a linha).
  */
 export async function getFunnelData(): Promise<FunnelStage[]> {
-  const deals = await getDeals();
+  const workspace = await getCurrentWorkspace();
 
-  const seeded = new Map<DealStage, FunnelStage>(
-    FUNNEL_STAGES.map((stage) => [stage, { stage, count: 0, value: 0 }]),
-  );
+  const empty = FUNNEL_STAGES.map((stage) => ({ stage, count: 0, value: 0 }));
 
-  for (const deal of deals) {
-    const entry = seeded.get(deal.stage);
-    if (!entry) continue;
+  if (!workspace) return empty;
 
-    entry.count += 1;
-    entry.value += deal.value;
-  }
+  const supabase = await createClient();
 
-  return Array.from(seeded.values());
+  const { data } = await supabase.rpc("dashboard_funnel", {
+    target_workspace_id: workspace.id,
+  });
+
+  if (!data) return empty;
+
+  return data.map((row) => ({
+    stage: row.stage,
+    count: Number(row.count),
+    value: Number(row.value),
+  }));
 }
 
 /** Um negócio com prazo, já acompanhado do responsável, para a tabela. */
@@ -125,37 +139,66 @@ function daysUntil(dueDate: string): number {
   return Math.round((due.getTime() - today.getTime()) / 86_400_000);
 }
 
+/** Fim da janela em ISO (yyyy-mm-dd), para o filtro rodar no banco. */
+function isoDayFromNow(days: number): string {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * Negócios abertos com prazo dentro da janela, do mais urgente ao menos.
  *
  * Vencidos aparecem primeiro e independem da janela: um prazo estourado é
  * exatamente o que a tela precisa mostrar. Negócio sem prazo fica de fora, e
  * os já fechados também — cobrar prazo de algo encerrado não faz sentido.
+ *
+ * O join traz responsável e lead na mesma query. Buscar a lista de membros e a
+ * de leads inteiras só para casar dois ids seria transferir dois conjuntos
+ * completos para exibir seis linhas.
  */
 export async function getUpcomingDeals({
   days = 30,
   limit = 6,
 }: UpcomingDealsOptions = {}): Promise<UpcomingDeal[]> {
-  const [openDeals, members, leads] = await Promise.all([
-    getOpenDeals(),
-    getMembers(),
-    getLeads(),
-  ]);
+  const workspace = await getCurrentWorkspace();
 
-  const usersById = new Map(
-    members.map((member) => [member.user.id, member.user]),
-  );
-  const leadsById = new Map(leads.map((lead) => [lead.id, lead]));
+  if (!workspace) return [];
 
-  return openDeals
-    .filter((deal): deal is Deal & { due_date: string } => Boolean(deal.due_date))
-    .map((deal) => ({
-      deal,
-      owner: usersById.get(deal.owner_id),
-      lead: deal.lead_id ? leadsById.get(deal.lead_id) : undefined,
-      daysLeft: daysUntil(deal.due_date),
-    }))
-    .filter((entry) => entry.daysLeft <= days)
-    .sort((a, b) => a.daysLeft - b.daysLeft)
-    .slice(0, limit);
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("deals")
+    .select(
+      `id, workspace_id, title, value, stage, position, due_date, lead_id, owner_id, created_at, updated_at,
+       owner:profiles!deals_owner_id_fkey (id, full_name, email, avatar_url),
+       lead:leads!deals_lead_id_fkey (id, workspace_id, name, email, phone, company, job_title, status, owner_id, created_at, updated_at)`,
+    )
+    .eq("workspace_id", workspace.id)
+    .not("stage", "in", "(fechado_ganho,fechado_perdido)")
+    // Sem prazo não entra na lista — a tela é sobre o que está por vencer.
+    .not("due_date", "is", null)
+    // O teto da janela vai no banco; vencidos entram sempre, então não há piso.
+    .lte("due_date", isoDayFromNow(days))
+    .order("due_date", { ascending: true })
+    .limit(limit);
+
+  if (!data) return [];
+
+  return data.map((row) => {
+    const { owner, lead, ...deal } = row;
+
+    return {
+      deal: {
+        ...deal,
+        // Mesma conversão de numeric→number de `lib/data/deals.ts`.
+        value: Number(deal.value),
+      } as Deal & { due_date: string },
+      owner: owner ?? undefined,
+      lead: lead ?? undefined,
+      daysLeft: daysUntil(deal.due_date as string),
+    };
+  });
 }

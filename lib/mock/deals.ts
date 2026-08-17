@@ -25,6 +25,7 @@ export const deals: Deal[] = [
     lead_id: leadId(4),
     owner_id: camila,
     created_at: "2026-08-03T19:30:00.000Z",
+    updated_at: "2026-08-03T19:30:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000002",
@@ -37,6 +38,7 @@ export const deals: Deal[] = [
     lead_id: leadId(17),
     owner_id: camila,
     created_at: "2026-08-12T14:20:00.000Z",
+    updated_at: "2026-08-12T14:20:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000003",
@@ -49,6 +51,7 @@ export const deals: Deal[] = [
     lead_id: leadId(13),
     owner_id: marina,
     created_at: "2026-08-11T13:15:00.000Z",
+    updated_at: "2026-08-11T13:15:00.000Z",
   },
 
   {
@@ -62,6 +65,7 @@ export const deals: Deal[] = [
     lead_id: leadId(9),
     owner_id: rafael,
     created_at: "2026-08-13T10:05:00.000Z",
+    updated_at: "2026-08-13T10:05:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000019",
@@ -74,6 +78,7 @@ export const deals: Deal[] = [
     lead_id: leadId(18),
     owner_id: camila,
     created_at: "2026-08-13T16:40:00.000Z",
+    updated_at: "2026-08-13T16:40:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000020",
@@ -86,6 +91,7 @@ export const deals: Deal[] = [
     lead_id: leadId(12),
     owner_id: marina,
     created_at: "2026-08-10T09:50:00.000Z",
+    updated_at: "2026-08-10T09:50:00.000Z",
   },
 
   // Contato Realizado
@@ -100,6 +106,7 @@ export const deals: Deal[] = [
     lead_id: leadId(2),
     owner_id: rafael,
     created_at: "2026-06-10T09:00:00.000Z",
+    updated_at: "2026-06-10T09:00:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000005",
@@ -112,6 +119,7 @@ export const deals: Deal[] = [
     lead_id: leadId(5),
     owner_id: camila,
     created_at: "2026-07-22T10:30:00.000Z",
+    updated_at: "2026-07-22T10:30:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000006",
@@ -124,6 +132,7 @@ export const deals: Deal[] = [
     lead_id: leadId(8),
     owner_id: rafael,
     created_at: "2026-07-31T11:10:00.000Z",
+    updated_at: "2026-07-31T11:10:00.000Z",
   },
 
   {
@@ -137,6 +146,7 @@ export const deals: Deal[] = [
     lead_id: leadId(15),
     owner_id: marina,
     created_at: "2026-07-28T08:45:00.000Z",
+    updated_at: "2026-07-28T08:45:00.000Z",
   },
 
   // Proposta Enviada
@@ -151,6 +161,7 @@ export const deals: Deal[] = [
     lead_id: leadId(1),
     owner_id: marina,
     created_at: "2026-06-20T13:40:00.000Z",
+    updated_at: "2026-06-20T13:40:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000008",
@@ -163,6 +174,7 @@ export const deals: Deal[] = [
     lead_id: leadId(11),
     owner_id: camila,
     created_at: "2026-07-05T15:00:00.000Z",
+    updated_at: "2026-07-05T15:00:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000009",
@@ -175,6 +187,7 @@ export const deals: Deal[] = [
     lead_id: leadId(6),
     owner_id: rafael,
     created_at: "2026-07-12T09:25:00.000Z",
+    updated_at: "2026-07-12T09:25:00.000Z",
   },
 
   // Negociação
@@ -189,6 +202,7 @@ export const deals: Deal[] = [
     lead_id: leadId(10),
     owner_id: marina,
     created_at: "2026-06-28T16:50:00.000Z",
+    updated_at: "2026-06-28T16:50:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000011",
@@ -201,6 +215,7 @@ export const deals: Deal[] = [
     lead_id: leadId(14),
     owner_id: camila,
     created_at: "2026-07-03T14:05:00.000Z",
+    updated_at: "2026-07-03T14:05:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000012",
@@ -213,6 +228,7 @@ export const deals: Deal[] = [
     lead_id: leadId(19),
     owner_id: marina,
     created_at: "2026-06-19T10:45:00.000Z",
+    updated_at: "2026-06-19T10:45:00.000Z",
   },
 
   // Fechado Ganho
@@ -227,6 +243,7 @@ export const deals: Deal[] = [
     lead_id: leadId(3),
     owner_id: marina,
     created_at: "2026-04-20T12:00:00.000Z",
+    updated_at: "2026-04-20T12:00:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000014",
@@ -239,6 +256,7 @@ export const deals: Deal[] = [
     lead_id: leadId(20),
     owner_id: camila,
     created_at: "2026-04-12T09:30:00.000Z",
+    updated_at: "2026-04-12T09:30:00.000Z",
   },
 
   // Fechado Perdido
@@ -253,6 +271,7 @@ export const deals: Deal[] = [
     lead_id: leadId(7),
     owner_id: marina,
     created_at: "2026-05-15T13:20:00.000Z",
+    updated_at: "2026-05-15T13:20:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000016",
@@ -265,6 +284,7 @@ export const deals: Deal[] = [
     lead_id: leadId(16),
     owner_id: rafael,
     created_at: "2026-05-08T15:10:00.000Z",
+    updated_at: "2026-05-08T15:10:00.000Z",
   },
 
   // Workspace 2
@@ -279,6 +299,7 @@ export const deals: Deal[] = [
     lead_id: leadId(21),
     owner_id: diego,
     created_at: "2026-06-12T10:15:00.000Z",
+    updated_at: "2026-06-12T10:15:00.000Z",
   },
   // O board da Vertex tinha um único card, numa coluna só. Os negócios abaixo
   // cobrem as seis etapas — inclusive Ganho e Perdido, que dão denominador à
@@ -295,6 +316,7 @@ export const deals: Deal[] = [
     lead_id: leadId(22),
     owner_id: diego,
     created_at: "2026-08-05T10:30:00.000Z",
+    updated_at: "2026-08-05T10:30:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000019",
@@ -307,6 +329,7 @@ export const deals: Deal[] = [
     lead_id: leadId(28),
     owner_id: diego,
     created_at: "2026-08-12T09:15:00.000Z",
+    updated_at: "2026-08-12T09:15:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000020",
@@ -319,6 +342,7 @@ export const deals: Deal[] = [
     lead_id: leadId(25),
     owner_id: diego,
     created_at: "2026-07-19T12:00:00.000Z",
+    updated_at: "2026-07-19T12:00:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000021",
@@ -331,6 +355,7 @@ export const deals: Deal[] = [
     lead_id: leadId(23),
     owner_id: diego,
     created_at: "2026-07-03T14:20:00.000Z",
+    updated_at: "2026-07-03T14:20:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000022",
@@ -343,6 +368,7 @@ export const deals: Deal[] = [
     lead_id: leadId(26),
     owner_id: diego,
     created_at: "2026-08-02T10:40:00.000Z",
+    updated_at: "2026-08-02T10:40:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000023",
@@ -355,6 +381,7 @@ export const deals: Deal[] = [
     lead_id: leadId(21),
     owner_id: diego,
     created_at: "2026-07-08T16:00:00.000Z",
+    updated_at: "2026-07-08T16:00:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000024",
@@ -367,6 +394,7 @@ export const deals: Deal[] = [
     lead_id: leadId(24),
     owner_id: diego,
     created_at: "2026-05-29T09:00:00.000Z",
+    updated_at: "2026-05-29T09:00:00.000Z",
   },
   {
     id: "d0000000-0000-4000-8000-000000000025",
@@ -379,5 +407,6 @@ export const deals: Deal[] = [
     lead_id: leadId(27),
     owner_id: diego,
     created_at: "2026-06-25T11:30:00.000Z",
+    updated_at: "2026-06-25T11:30:00.000Z",
   },
 ];
