@@ -15,6 +15,7 @@
     "db:push": "supabase db push",
     "db:diff": "supabase db diff -f",
     "db:seed": "node scripts/seed-from-fixtures.mjs",
+    "db:studio-sql": "node scripts/build-studio-sql.mjs",
     "db:types": "supabase gen types typescript --project-id bbfsoszmwkymiwuxzgfe --schema public > types/database.ts"
   },
   "dependencies": {
