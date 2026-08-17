@@ -291,21 +291,28 @@ a partir de `lib/mock/` por `npm run db:seed`.
 com RLS ativo, 27 policies, 7 enums, 3 funções `security definer`, 5 triggers
 de integridade, `WITH CHECK` em toda escrita e `subscriptions` somente leitura.
 
+- [x] **Teste de isolamento** — fechado no M9/M10 com duas contas reais criadas
+      pelo signup (o seed nunca foi carregado, porque o banco está marcado
+      `PRODUCTION`). Verificado: Diego não vê os workspaces da Marina nem o
+      inverso; acesso direto por id devolve vazio; escrita cruzada em `leads`
+      é recusada com `42501`; `update` de `subscriptions` para `pro` afeta 0
+      linhas — o auto-upgrade sem pagar está barrado
+
+**Índices de FK** (`20260817130000`, achado auditando o schema contra a skill
+`supabase-postgres-best-practices`): `leads.owner_id`, `deals.owner_id`,
+`activities.author_id` e `invites.invited_by` não tinham índice próprio. Os
+compostos não serviam — `(workspace_id, owner_id)` só é usado quando o filtro
+inclui a primeira coluna, e a verificação de FK consulta `owner_id` sozinho.
+Como as duas primeiras são `on delete restrict`, apagar um perfil varria as
+tabelas inteiras segurando lock.
+
 ⚠️ **O que falta para o M8 estar realmente fechado:**
 
-1. **Teste de isolamento.** É a verificação central do milestone e nenhuma das
-   checagens acima a substitui: todas conferem *estrutura*, não *comportamento*.
-   Que Diego não enxergue os leads da Lumiar precisa de dados para ser testado,
-   e o seed não está carregado. Está pendente a decisão de carregá-lo — o banco
-   aparece como `main PRODUCTION`, e o seed cria usuários com senha conhecida
-   (`pipeflow123`) e ~55 registros fictícios, que não podem existir num banco
-   que vá atender usuários reais. Alternativa sem seed: duas contas reais pelo
-   signup, exercitando o mesmo caminho.
-2. **Histórico de migrations vazio no remoto.** Aplicar pelo SQL Editor não
+1. **Histórico de migrations vazio no remoto.** Aplicar pelo SQL Editor não
    registra nada na tabela de controle, então `supabase migration list` mostra
-   as três com `remote: ""`. Um `db:push` futuro tentaria reaplicar tudo e
+   as migrations com `remote: ""`. Um `db:push` futuro tentaria reaplicar tudo e
    falharia em `relation already exists`. Corrige-se com
-   `supabase migration repair --status applied 20260817120000 20260817120100 20260817120200`.
+   `supabase migration repair --status applied 20260817120000 20260817120100 20260817120200 20260817130000`.
 
 ---
 
@@ -315,15 +322,34 @@ de integridade, `WITH CHECK` em toda escrita e `subscriptions` somente leitura.
 
 **Objetivo:** telas do M2 autenticando de verdade, com rotas protegidas.
 
-- [ ] Supabase Auth com e-mail/senha ligado às Server Actions do M2
-- [ ] Rota de callback e confirmação de e-mail
-- [ ] `middleware.ts` protegendo `(app)` e redirecionando logado para fora de `(auth)`
-- [ ] Refresh de sessão no middleware
-- [ ] Recuperação e redefinição de senha funcionando
-- [ ] Logout
-- [ ] Usuário real substitui o mock no menu da sidebar
+- [x] Supabase Auth com e-mail/senha ligado às Server Actions do M2
+- [x] Rota de callback e confirmação de e-mail
+- [x] `middleware.ts` protegendo `(app)` e redirecionando logado para fora de `(auth)`
+- [x] Refresh de sessão no middleware
+- [x] Recuperação e redefinição de senha funcionando
+- [x] Logout
+- [x] Usuário real substitui o mock no menu da sidebar
 
 **Commit final:** `feat: autenticação com Supabase Auth e proteção de rotas`
+
+**Decisões de segurança:**
+
+- Mensagem **única** no login para credencial errada, e-mail inexistente e conta
+  não confirmada. Distinguir os casos permitiria enumerar quais e-mails têm
+  conta — mesma razão da resposta sempre positiva no "esqueci a senha"
+- Middleware usa `getUser()`, não `getSession()`: o primeiro valida o JWT contra
+  o servidor do Auth, o segundo só lê o cookie, que o cliente pode forjar
+- `/callback` e `/reset-password` ficam fora das duas listas de rota: quem clica
+  no link de redefinição chega **com** sessão, e tratá-las como rota de auth
+  mandaria a pessoa ao dashboard, tornando impossível redefinir a senha
+- `safeNext()` barra open redirect no callback e no pós-login, inclusive
+  `//host` e `/\host`, que o navegador lê como URL absoluta apesar da barra
+
+⚠️ **Não exercitado de ponta a ponta:** o fluxo de **confirmação de e-mail** e o
+de **redefinição de senha** dependem de e-mail real chegando. A confirmação está
+desligada no painel, então o signup loga direto; o código trata os dois casos
+(`data.session` ausente → mensagem "confira seu e-mail"), mas o caminho com link
+real nunca foi percorrido. Vale testar antes do M15.
 
 ---
 
@@ -333,9 +359,12 @@ de integridade, `WITH CHECK` em toda escrita e `subscriptions` somente leitura.
 
 **Objetivo:** multi-empresa funcionando ponta a ponta, com convite por e-mail.
 
-- [ ] Criar workspace (torna o criador admin) no fluxo de onboarding
-- [ ] Workspace ativo persistido em cookie; switcher trocando o contexto de verdade
-- [ ] Todas as funções de `lib/data/` passam a filtrar pelo workspace ativo
+- [x] Criar workspace (torna o criador admin) no fluxo de onboarding
+- [x] Workspace ativo persistido em cookie; switcher trocando o contexto de verdade
+- [~] Todas as funções de `lib/data/` passam a filtrar pelo workspace ativo —
+      `getWorkspaces`, `getCurrentWorkspace`, `getCurrentMember` e `getMembers`
+      já leem do banco; leads, deals e activities continuam em fixtures até
+      M11/M12, mas já respeitam o workspace ativo e o caso "sem workspace"
 - [ ] Convite: gera token, grava em `invites`, envia e-mail com Resend
 - [ ] Template do e-mail de convite com a identidade visual
 - [ ] Rota `/invite/[token]`: aceitar convite, com e sem conta prévia
@@ -343,6 +372,23 @@ de integridade, `WITH CHECK` em toda escrita e `subscriptions` somente leitura.
 - [ ] Autorização por papel checada na Server Action, não só na UI
 
 **Commit final:** `feat: workspaces, troca de contexto e convites por e-mail`
+
+**O admin não é criado pela Server Action:** quem insere o vínculo é o trigger
+`handle_new_workspace` do M8. Fazê-lo na action seria impossível — a policy de
+insert em `workspace_members` exige ser admin, e no instante da criação ainda
+não existe admin algum.
+
+**`/onboarding` fica fora do route group `(app)`.** O layout de `(app)`
+redireciona para lá quem não tem workspace; se a página vivesse dentro, o layout
+rodaria antes dela e o redirect entraria em loop. Em compensação ela entra
+explicitamente na lista de rotas protegidas do middleware.
+
+**Bug encontrado ao testar:** o insert de workspace **não pode encadear
+`.select()`**. O PostgREST gera `INSERT ... RETURNING`, e o `RETURNING` passa
+pela policy de SELECT (`is_workspace_member`), que ainda é falsa nesse instante
+— o vínculo só nasce no trigger, depois da linha existir. O insert gravava e a
+leitura de volta falhava com `42501`: o usuário via "não foi possível criar" um
+workspace que **tinha sido criado**. Só apareceu rodando; compilava sem erro.
 
 ---
 

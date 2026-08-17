@@ -74,3 +74,25 @@ export function formatDate(
 
   return dateFormatters[format].format(date);
 }
+
+/**
+ * Gera um slug de URL a partir do nome do workspace: "Lumiar Digital" vira
+ * "lumiar-digital".
+ *
+ * A normalização NFD + remoção de diacríticos é a mesma ideia do `normalize()`
+ * da busca de leads: "Construções Piave" precisa virar "construcoes-piave", e
+ * não "construes-piave" (o que aconteceria descartando os acentuados).
+ *
+ * O resultado precisa satisfazer o `check` da coluna `workspaces.slug`
+ * (`^[a-z0-9]+(-[a-z0-9]+)*$`), então nome só de símbolos devolve string vazia
+ * e quem chama trata — ver `uniqueSlug` na action de criação.
+ */
+export function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+}

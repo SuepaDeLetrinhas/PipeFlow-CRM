@@ -8,6 +8,8 @@ import { getCurrentWorkspace } from "./workspaces";
 export async function getDeals(): Promise<Deal[]> {
   const workspace = await getCurrentWorkspace();
 
+  if (!workspace) return [];
+
   return deals
     .filter((deal) => deal.workspace_id === workspace.id)
     .sort((a, b) => a.position - b.position);

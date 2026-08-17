@@ -7,6 +7,10 @@ import { getCurrentWorkspace } from "./workspaces";
 export async function getLeads(): Promise<Lead[]> {
   const workspace = await getCurrentWorkspace();
 
+  // Sem workspace ativo não há o que listar. O layout de `(app)` já redireciona
+  // para o onboarding nesse caso, então na prática as telas não chegam aqui.
+  if (!workspace) return [];
+
   return leads
     .filter((lead) => lead.workspace_id === workspace.id)
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
@@ -178,6 +182,8 @@ export async function getLeadsPage(
 
 export async function getLeadById(id: string): Promise<Lead | null> {
   const workspace = await getCurrentWorkspace();
+
+  if (!workspace) return null;
 
   return (
     leads.find(

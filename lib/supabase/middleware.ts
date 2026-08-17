@@ -12,8 +12,20 @@ import type { Database } from "@/types/database";
  * que não podem escrever cookie.
  */
 
-/** Área logada: exige sessão. */
-const APP_ROUTES = ["/dashboard", "/leads", "/pipeline", "/settings"];
+/**
+ * Área logada: exige sessão.
+ *
+ * `/onboarding` entra na lista apesar de viver fora do route group `(app)` —
+ * ele precisa ficar de fora para não entrar em loop com o redirect do layout,
+ * mas continua sendo tela de usuário autenticado.
+ */
+const APP_ROUTES = [
+  "/dashboard",
+  "/leads",
+  "/pipeline",
+  "/settings",
+  "/onboarding",
+];
 
 /** Telas de entrada: quem já está logado não tem o que fazer aqui. */
 const AUTH_ROUTES = ["/login", "/signup", "/forgot-password"];

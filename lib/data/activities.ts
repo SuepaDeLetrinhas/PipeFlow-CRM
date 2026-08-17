@@ -9,6 +9,8 @@ export async function getActivitiesByLead(
 ): Promise<Activity[]> {
   const workspace = await getCurrentWorkspace();
 
+  if (!workspace) return [];
+
   return activities
     .filter(
       (activity) =>
