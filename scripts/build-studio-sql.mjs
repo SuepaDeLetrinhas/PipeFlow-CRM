@@ -29,6 +29,14 @@ import { fileURLToPath } from "node:url";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "..");
 
+/**
+ * Ordem = ordem das migrations. Migrations de correcao posteriores nao entram
+ * aqui: a correcao ja foi aplicada na migration de origem, entao um banco
+ * criado do zero por este script nasce correto e reaplicar o fix seria
+ * redundante (no caso do 120200, o `delete` chegaria a rodar sem necessidade).
+ * Bancos que ja tem o schema antigo aplicam o fix pela CLI ou colando o arquivo
+ * da migration diretamente.
+ */
 const SOURCES = [
   "supabase/migrations/20260817120000_init_schema.sql",
   "supabase/migrations/20260817120100_rls_policies.sql",

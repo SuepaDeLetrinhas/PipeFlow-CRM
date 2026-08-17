@@ -231,7 +231,11 @@ create table public.invites (
   role public.role not null default 'member',
   token text not null unique,
   status public.invite_status not null default 'pending',
-  invited_by uuid references public.profiles (id) on delete set null,
+  -- `not null` porque a policy de insert exige `invited_by = auth.uid()`:
+  -- deixar a coluna anulavel permitiria escrever um insert que o banco recusa
+  -- com erro generico de RLS, dificil de diagnosticar. `on delete restrict`
+  -- pelo mesmo motivo — um convite pendente sem autor nao satisfaria a policy.
+  invited_by uuid not null references public.profiles (id) on delete restrict,
   expires_at timestamptz not null default now() + interval '7 days',
   created_at timestamptz not null default now()
 );
