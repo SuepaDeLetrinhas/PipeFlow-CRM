@@ -139,7 +139,7 @@ export type Database = {
           email: string
           expires_at: string
           id: string
-          invited_by: string | null
+          invited_by: string
           role: Database["public"]["Enums"]["role"]
           status: Database["public"]["Enums"]["invite_status"]
           token: string
@@ -150,7 +150,7 @@ export type Database = {
           email: string
           expires_at?: string
           id?: string
-          invited_by?: string | null
+          invited_by: string
           role?: Database["public"]["Enums"]["role"]
           status?: Database["public"]["Enums"]["invite_status"]
           token: string
@@ -161,7 +161,7 @@ export type Database = {
           email?: string
           expires_at?: string
           id?: string
-          invited_by?: string | null
+          invited_by?: string
           role?: Database["public"]["Enums"]["role"]
           status?: Database["public"]["Enums"]["invite_status"]
           token?: string
