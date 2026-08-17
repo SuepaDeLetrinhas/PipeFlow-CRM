@@ -23,33 +23,21 @@ import {
  */
 
 /**
- * Encontra um slug livre. O nome é do usuário e colide com facilidade ("Studio",
- * "Consultoria"), e a coluna tem unique — sem isto, a segunda empresa de mesmo
- * nome receberia um erro de constraint em vez de um workspace.
+ * Monta o slug da tentativa `attempt`.
+ *
+ * Não há consulta prévia para "verificar se o slug está livre", de propósito:
+ * a leitura passa por RLS e workspaces de terceiros não aparecem, então um slug
+ * já em uso pareceria livre e a checagem daria falsa confiança — além de gastar
+ * uma query por tentativa. Quem decide é o unique da coluna; a colisão volta
+ * como 23505 e o laço em `createWorkspaceAction` tenta de novo.
  */
-async function uniqueSlug(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  name: string,
-) {
+function buildSlug(name: string, attempt: number) {
   const base = slugify(name) || "workspace";
 
-  for (let attempt = 0; attempt < 20; attempt += 1) {
-    const candidate = attempt === 0 ? base : `${base}-${attempt + 1}`;
+  // A primeira tentativa usa o slug limpo, que é o que aparece na URL no caso
+  // comum. As seguintes ganham sufixo aleatório.
+  if (attempt === 0) return base;
 
-    // `maybeSingle` porque ausência é o caso esperado e não deve virar erro.
-    // A leitura passa por RLS: workspace de terceiros não aparece, então um
-    // slug já usado por outra empresa pode "parecer" livre — o unique da coluna
-    // é quem decide de fato, e o retry abaixo cobre a corrida.
-    const { data } = await supabase
-      .from("workspaces")
-      .select("id")
-      .eq("slug", candidate)
-      .maybeSingle();
-
-    if (!data) return candidate;
-  }
-
-  // Sufixo aleatório como última saída, em vez de falhar depois de 20 tentativas.
   return `${base}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -78,11 +66,12 @@ export async function createWorkspaceAction(
 
   let workspaceId: string | null = null;
 
-  // Duas tentativas: entre checar o slug e inserir, outra pessoa pode ter
-  // levado o mesmo. `23505` é unique_violation — só ele merece retry; qualquer
-  // outro erro é problema real e sai pela mensagem.
-  for (let attempt = 0; attempt < 2 && !workspaceId; attempt += 1) {
-    const slug = await uniqueSlug(supabase, parsed.data.name);
+  // Nomes de empresa colidem com facilidade ("Studio", "Consultoria") e a
+  // coluna tem unique. `23505` é unique_violation — só ele merece nova
+  // tentativa, com sufixo aleatório; qualquer outro erro é problema real e sai
+  // pela mensagem. Cinco tentativas tornam a falha por azar desprezível.
+  for (let attempt = 0; attempt < 5 && !workspaceId; attempt += 1) {
+    const slug = buildSlug(parsed.data.name, attempt);
 
     // Sem `.select()` encadeado, de propósito. Ele geraria `INSERT ...
     // RETURNING`, e o RETURNING é avaliado pela policy de SELECT
