@@ -8,7 +8,7 @@ Os milestones **M0–M7 constroem toda a interface** com dados falsos (fixtures 
 
 Para que a troca seja barata, três regras valem desde o M0:
 
-1. Os fixtures vivem em `lib/mock/` e seguem **exatamente** o shape das tabelas do modelo de dados do CLAUDE.md (snake_case, `workspace_id` presente, ids como uuid). Quando `types/database.ts` for gerado no M8, os fixtures passam a ser tipados por ele.
+1. Os fixtures vivem em `lib/mock/` e seguem **exatamente** o shape das tabelas do modelo de dados do CLAUDE.md (snake_case, `workspace_id` presente, ids como uuid). `types/database.ts` foi gerado no M8, mas os fixtures **continuam tipados por `types/index.ts`** (à mão): retipá-los só tem valor junto com as queries reais, no M11, quando qualquer divergência entre os dois shapes vira erro de compilação em vez de detalhe invisível.
 2. Todo acesso a dados passa por funções em `lib/data/` (`getLeads()`, `getDeals()`, …). Na fase de UI elas retornam fixtures; na fase de backend o corpo vira query Supabase e **a assinatura não muda**.
 3. Toda mutation já é escrita como Server Action com validação Zod desde a fase de UI — na fase de UI ela apenas valida e devolve sucesso; depois passa a escrever no banco.
 
@@ -238,22 +238,74 @@ virar dado verdadeiro ou sair — é alegação a cliente.
 
 ### M8 · Schema, RLS e clientes Supabase
 
-**Branch:** `feat/m8-supabase-schema`
+**Branch:** `feat/supabase-core` (o plano previa `feat/m8-supabase-schema`)
 
 **Objetivo:** banco modelado, isolado por workspace e tipado — sem tela conectada ainda.
 
-- [ ] Projeto Supabase criado; Supabase CLI inicializada em `supabase/`
-- [ ] Migration com as 7 tabelas do CLAUDE.md, enums (`role`, `lead_status`, `deal_stage`, `activity_type`, `plan`) e índices por `workspace_id`
-- [ ] Trigger de criação de perfil no signup
-- [ ] Função `is_workspace_member(workspace_id)` para uso nas policies
-- [ ] RLS habilitado em todas as tabelas + policies de select/insert/update/delete por workspace
-- [ ] Policies de admin (gerenciar membros, convites e billing)
-- [ ] Seed de desenvolvimento espelhando os fixtures
-- [ ] Clientes em `lib/supabase/`: `server.ts`, `client.ts`, `middleware.ts`
-- [ ] `types/database.ts` gerado; fixtures do M3 retipados por ele
-- [ ] Teste manual de isolamento: usuário do workspace A não enxerga dados do B
+- [x] Projeto Supabase criado; Supabase CLI inicializada em `supabase/`
+- [x] Migration com as tabelas do CLAUDE.md, enums e índices por `workspace_id`
+- [x] Trigger de criação de perfil no signup
+- [x] Função `is_workspace_member(workspace_id)` para uso nas policies
+- [x] RLS habilitado em todas as tabelas + policies de select/insert/update/delete por workspace
+- [x] Policies de admin (gerenciar membros, convites e billing)
+- [x] Seed de desenvolvimento espelhando os fixtures
+- [x] Clientes em `lib/supabase/`: `server.ts`, `client.ts`, `middleware.ts` (vieram no PR #6)
+- [x] `types/database.ts` gerado
+- [ ] **Fixtures do M3 retipados pelos tipos gerados** — `lib/mock/` ainda importa
+      de `types/index.ts` (tipos à mão). Fica para o M11, quando as telas
+      passarem a ler do banco e a diferença entre os dois shapes aparecer
+- [ ] **Teste de isolamento: usuário do workspace A não enxerga dados do B** —
+      ver "o que falta", abaixo
 
 **Commit final:** `feat: schema Postgres, policies RLS e clientes Supabase`
+
+**Duas tabelas além das 7 do CLAUDE.md:**
+
+- `profiles` — o tipo `User` precisa de `full_name`/`avatar_url` e `auth.users`
+  não é legível sob RLS pelo cliente. Sem esse espelho, nenhum join de
+  responsável ou autor teria nome para exibir
+- `invites` — está no modelo de dados do CLAUDE.md e é pré-requisito do M10
+
+**Decisões de segurança:**
+
+- As funções de apoio são `security definer` por necessidade estrutural: uma
+  policy sobre `workspace_members` que consulte `workspace_members` dispara a
+  própria policy e aborta por recursão infinita
+- `subscriptions` não tem policy de insert/update para `authenticated`. Quem
+  escreve billing é o webhook com service-role. Com uma policy de update, um
+  membro viraria Pro com um PATCH no PostgREST, sem pagar
+- Sem `force row level security`: `force` valeria também para `postgres`, a
+  identidade por trás da service-role, e quebraria o webhook do Stripe
+- Dois triggers impedem negócio e atividade de referenciar lead de outro
+  workspace — o `with check` valida o `workspace_id` da linha, não o do lead
+  apontado, e essa brecha seria um vazamento por join
+- O dono do workspace não pode ser removido nem rebaixado, senão a policy que
+  deixa um membro sair sozinho poderia deixar o workspace sem admin nenhum
+
+**Aplicação:** o schema foi aplicado pelo SQL Editor do Studio, não pela CLI
+(sem Docker na máquina de desenvolvimento). `supabase/studio/` tem o script
+consolidado (`apply_all.sql`, reexecutável) e as verificações. O seed é gerado
+a partir de `lib/mock/` por `npm run db:seed`.
+
+**Verificado contra o banco remoto** (`supabase db query --linked`): 8 tabelas
+com RLS ativo, 27 policies, 7 enums, 3 funções `security definer`, 5 triggers
+de integridade, `WITH CHECK` em toda escrita e `subscriptions` somente leitura.
+
+⚠️ **O que falta para o M8 estar realmente fechado:**
+
+1. **Teste de isolamento.** É a verificação central do milestone e nenhuma das
+   checagens acima a substitui: todas conferem *estrutura*, não *comportamento*.
+   Que Diego não enxergue os leads da Lumiar precisa de dados para ser testado,
+   e o seed não está carregado. Está pendente a decisão de carregá-lo — o banco
+   aparece como `main PRODUCTION`, e o seed cria usuários com senha conhecida
+   (`pipeflow123`) e ~55 registros fictícios, que não podem existir num banco
+   que vá atender usuários reais. Alternativa sem seed: duas contas reais pelo
+   signup, exercitando o mesmo caminho.
+2. **Histórico de migrations vazio no remoto.** Aplicar pelo SQL Editor não
+   registra nada na tabela de controle, então `supabase migration list` mostra
+   as três com `remote: ""`. Um `db:push` futuro tentaria reaplicar tudo e
+   falharia em `relation already exists`. Corrige-se com
+   `supabase migration repair --status applied 20260817120000 20260817120100 20260817120200`.
 
 ---
 
