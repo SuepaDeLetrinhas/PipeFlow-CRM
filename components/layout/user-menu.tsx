@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LogOut, Monitor, Moon, Settings, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
+import { signOutAction } from "@/app/(auth)/actions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,11 +93,19 @@ export function UserMenu({ user }: { user: User }) {
 
         <DropdownMenuSeparator />
 
-        {/* Logout de verdade entra junto com o Supabase Auth. */}
-        <DropdownMenuItem className="gap-2 text-muted-foreground">
-          <LogOut className="size-4" />
-          Sair
-        </DropdownMenuItem>
+        {/*
+          Form em vez de onClick: a Server Action precisa de um POST para
+          escrever o cookie de sessão limpo na resposta. `asChild` mantém o
+          estilo do item do menu no botão.
+        */}
+        <form action={signOutAction}>
+          <DropdownMenuItem asChild className="gap-2 text-muted-foreground">
+            <button type="submit" className="w-full cursor-pointer">
+              <LogOut className="size-4" />
+              Sair
+            </button>
+          </DropdownMenuItem>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -6,7 +6,7 @@ import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 import { signUpAction } from "@/app/(auth)/actions";
-import { FormError } from "@/components/auth/form-error";
+import { FormError, FormSuccess } from "@/components/auth/form-error";
 import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import { signUpSchema, type SignUpInput } from "@/lib/validations/auth";
 export function SignupForm() {
   const [pending, startTransition] = React.useTransition();
   const [formError, setFormError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
@@ -32,9 +33,19 @@ export function SignupForm() {
 
   function onSubmit(values: SignUpInput) {
     setFormError(null);
+    setSuccess(null);
 
     startTransition(async () => {
       const result = await signUpAction(values);
+
+      // Em caso de sucesso COM sessão a action redireciona e nada aqui roda.
+      // Chega-se a este ponto com `ok: true` apenas quando a confirmação de
+      // e-mail está ligada: a conta existe, mas ainda não dá para entrar.
+      if (result.ok) {
+        setSuccess(result.message ?? "Conta criada. Confira seu e-mail.");
+        form.reset();
+        return;
+      }
 
       for (const [field, message] of Object.entries(result.fieldErrors ?? {})) {
         form.setError(field as keyof SignUpInput, { message });
@@ -47,6 +58,7 @@ export function SignupForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormError message={formError} />
+        <FormSuccess message={success} />
 
         <FormField
           control={form.control}

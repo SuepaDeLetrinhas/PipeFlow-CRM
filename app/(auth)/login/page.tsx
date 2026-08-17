@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { AuthCard } from "@/components/auth/auth-card";
-import { FormSuccess } from "@/components/auth/form-error";
+import { FormError, FormSuccess } from "@/components/auth/form-error";
 import { LoginForm } from "@/components/auth/login-form";
 
 export const metadata: Metadata = { title: "Entrar" };
@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Entrar" };
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { redefinida?: string };
+  searchParams: { redefinida?: string; next?: string; erro?: string };
 }) {
   return (
     <AuthCard
@@ -31,7 +31,14 @@ export default function LoginPage({
         </div>
       ) : null}
 
-      <LoginForm />
+      {/* Link de e-mail expirado ou já usado chega aqui pelo callback. */}
+      {searchParams.erro ? (
+        <div className="mb-4">
+          <FormError message={searchParams.erro} />
+        </div>
+      ) : null}
+
+      <LoginForm next={searchParams.next} />
     </AuthCard>
   );
 }
