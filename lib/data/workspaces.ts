@@ -1,12 +1,10 @@
 import { cache } from "react";
 
-import {
-  currentWorkspace,
-  members,
-  subscriptions,
-  workspaces,
-} from "@/lib/mock/workspaces";
+import { cookies } from "next/headers";
+
+import { subscriptions } from "@/lib/mock/workspaces";
 import { createClient } from "@/lib/supabase/server";
+import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie";
 import type {
   Subscription,
   User,
@@ -15,27 +13,53 @@ import type {
 } from "@/types";
 
 /**
- * Camada de acesso a dados. A partir do M9 o usuário logado vem do Supabase
- * Auth; workspaces, membros e assinatura seguem em fixtures até o M10, quando
- * o workspace ativo passa a existir de verdade (cookie de contexto).
+ * Camada de acesso a dados. Usuário logado e workspaces vêm do banco; membros e
+ * assinatura seguem em fixtures até as telas do M7/M10 que os consomem.
  */
 
 /**
  * Workspaces em que o usuário logado é membro.
  *
- * Ainda em fixtures: as tabelas existem e têm RLS, mas o vínculo entre a conta
- * real e um workspace só é criado no M10 (onboarding). Filtrar pelo id real
- * contra membros fictícios devolveria lista vazia e deixaria o switcher e o
- * app inteiro sem contexto — regressão visível numa etapa que não trata disso.
+ * Sem filtro por usuário na query: a policy `workspaces_select_member` já
+ * restringe as linhas a quem é membro. Filtrar de novo aqui duplicaria a regra
+ * em dois lugares, e o do cliente é o que sai de sincronia.
  */
-export async function getWorkspaces(): Promise<Workspace[]> {
-  return workspaces;
-}
+export const getWorkspaces = cache(async function getWorkspaces(): Promise<
+  Workspace[]
+> {
+  const supabase = await createClient();
 
-/** Workspace ativo. No M10 passa a vir do cookie de contexto. */
-export async function getCurrentWorkspace(): Promise<Workspace> {
-  return currentWorkspace;
-}
+  const { data } = await supabase
+    .from("workspaces")
+    .select("id, name, slug, owner_id, plan, created_at")
+    .order("created_at", { ascending: true });
+
+  return data ?? [];
+});
+
+/**
+ * Workspace ativo, do cookie de contexto.
+ *
+ * Devolve `null` quando a conta ainda não tem workspace — estado real de quem
+ * acabou de se cadastrar, e o que dispara o onboarding. O layout de `(app)`
+ * trata esse caso redirecionando; as telas nunca recebem `null`.
+ *
+ * O cookie é apenas uma preferência de contexto: se apontar para um workspace
+ * do qual a pessoa não é (ou deixou de ser) membro, ele não aparece em
+ * `getWorkspaces()` — barrado pela RLS — e cai no primeiro da lista.
+ */
+export const getCurrentWorkspace = cache(
+  async function getCurrentWorkspace(): Promise<Workspace | null> {
+    const available = await getWorkspaces();
+
+    if (available.length === 0) return null;
+
+    const preferred = cookies().get(WORKSPACE_COOKIE)?.value;
+    const match = available.find((workspace) => workspace.id === preferred);
+
+    return match ?? available[0];
+  },
+);
 
 /**
  * Usuário logado, a partir da sessão do Supabase Auth.
@@ -79,13 +103,11 @@ export const getCurrentUser = cache(async function getCurrentUser(): Promise<Use
 });
 
 /**
- * Papel do usuário logado no workspace ativo.
+ * Papel do usuário logado no workspace ativo — do banco.
  *
- * Como `getWorkspaces`, ainda em fixtures até o M10 criar o vínculo real: o
- * usuário autenticado assume o papel do primeiro membro do workspace ativo.
- * Comparar o id real com `user_id` fictício devolveria `null` sempre, e um
- * `null` aqui significa "não é membro" — o que esconderia da própria conta os
- * controles de admin no M7.
+ * `null` significa "não é membro deste workspace", e o M7 usa isso para decidir
+ * quais controles de admin aparecem. A checagem definitiva continua sendo no
+ * servidor: esconder botão é conveniência, não autorização.
  */
 export async function getCurrentMember(): Promise<WorkspaceMember | null> {
   const [user, workspace] = await Promise.all([
@@ -93,21 +115,63 @@ export async function getCurrentMember(): Promise<WorkspaceMember | null> {
     getCurrentWorkspace(),
   ]);
 
-  const member = members.find(
-    (candidate) => candidate.workspace_id === workspace.id,
-  );
+  if (!workspace) return null;
 
-  return member ? { ...member, user_id: user.id, user } : null;
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("workspace_members")
+    .select("id, workspace_id, user_id, role, created_at")
+    .eq("workspace_id", workspace.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return data ? { ...data, user } : null;
 }
 
+/**
+ * Membros do workspace ativo, com o perfil de cada um.
+ *
+ * O join com `profiles` é o que dá nome e avatar à lista; a policy de profiles
+ * permite ler o perfil de quem divide workspace com você, então o `select`
+ * aninhado funciona sob RLS sem exceção nenhuma.
+ */
 export async function getMembers(): Promise<WorkspaceMember[]> {
   const workspace = await getCurrentWorkspace();
 
-  return members.filter((member) => member.workspace_id === workspace.id);
+  if (!workspace) return [];
+
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("workspace_members")
+    .select(
+      "id, workspace_id, user_id, role, created_at, profiles (id, full_name, email, avatar_url)",
+    )
+    .eq("workspace_id", workspace.id)
+    .order("created_at", { ascending: true });
+
+  if (!data) return [];
+
+  return data.map((member) => {
+    const { profiles, ...rest } = member;
+
+    return {
+      ...rest,
+      user: profiles ?? {
+        id: member.user_id,
+        full_name: "Usuário",
+        email: "",
+        avatar_url: null,
+      },
+    };
+  });
 }
 
 export async function getSubscription(): Promise<Subscription | null> {
   const workspace = await getCurrentWorkspace();
+
+  if (!workspace) return null;
 
   return (
     subscriptions.find(

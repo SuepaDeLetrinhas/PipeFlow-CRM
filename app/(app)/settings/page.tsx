@@ -14,6 +14,10 @@ export default async function SettingsPage() {
     getMembers(),
   ]);
 
+  // O layout de `(app)` já mandou para o onboarding quem não tem workspace, mas
+  // o tipo é anulável e o TypeScript cobra o tratamento aqui.
+  if (!workspace) return null;
+
   return (
     <>
       <PageHeader

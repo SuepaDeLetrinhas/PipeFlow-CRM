@@ -1,8 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronsUpDown, Plus } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Check, ChevronsUpDown, Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
 
+import { switchWorkspaceAction } from "@/app/(app)/workspaces/actions";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,13 +31,30 @@ export function WorkspaceSwitcher({
   activeWorkspaceId,
   collapsed = false,
 }: WorkspaceSwitcherProps) {
-  // A seleção vive só no cliente: trocar de contexto de verdade (cookie +
-  // refetch por workspace) é o M10. Aqui ela existe para a UI responder.
-  const [selectedId, setSelectedId] = React.useState(activeWorkspaceId);
+  const router = useRouter();
+  const [pending, startTransition] = React.useTransition();
 
   const active =
-    workspaces.find((workspace) => workspace.id === selectedId) ??
+    workspaces.find((workspace) => workspace.id === activeWorkspaceId) ??
     workspaces[0];
+
+  function onSelect(workspaceId: string) {
+    if (workspaceId === active?.id) return;
+
+    startTransition(async () => {
+      const result = await switchWorkspaceAction({ workspaceId });
+
+      if (!result.ok) {
+        toast.error(result.message ?? "Não foi possível trocar de workspace.");
+        return;
+      }
+
+      // `refresh()` refaz os Server Components com o cookie novo. Sem ele, a
+      // tela continuaria mostrando os dados do workspace anterior até a próxima
+      // navegação — o contexto teria mudado no servidor, mas não na tela.
+      router.refresh();
+    });
+  }
 
   if (!active) return null;
 
@@ -74,7 +95,8 @@ export function WorkspaceSwitcher({
         {workspaces.map((workspace) => (
           <DropdownMenuItem
             key={workspace.id}
-            onSelect={() => setSelectedId(workspace.id)}
+            onSelect={() => onSelect(workspace.id)}
+            disabled={pending}
             className="gap-2"
           >
             <span className="flex size-6 shrink-0 items-center justify-center rounded bg-primary/10 text-[10px] font-semibold text-primary">
@@ -87,9 +109,15 @@ export function WorkspaceSwitcher({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2 text-muted-foreground">
-          <Plus className="size-4" />
-          Criar workspace
+        <DropdownMenuItem asChild className="gap-2 text-muted-foreground">
+          <Link href="/workspaces/novo">
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Plus className="size-4" />
+            )}
+            Criar workspace
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
