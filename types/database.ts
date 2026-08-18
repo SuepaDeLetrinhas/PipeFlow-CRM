@@ -271,6 +271,27 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_events: {
+        Row: {
+          event_created_at: string
+          id: string
+          processed_at: string
+          type: string
+        }
+        Insert: {
+          event_created_at: string
+          id: string
+          processed_at?: string
+          type: string
+        }
+        Update: {
+          event_created_at?: string
+          id?: string
+          processed_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string

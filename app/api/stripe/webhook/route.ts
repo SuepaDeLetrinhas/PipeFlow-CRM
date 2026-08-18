@@ -22,8 +22,10 @@ import type { Plan, SubscriptionStatus } from "@/types";
  *    chaves, e a verificação passa a falhar em eventos legítimos.
  * 2. **Idempotência.** O Stripe reentrega o mesmo evento em qualquer resposta
  *    que não seja 2xx, e reentrega mesmo depois de um 200 em falhas de rede.
- *    Todo handler aqui é um `upsert` com `onConflict: "workspace_id"` — rodar
- *    duas vezes tem o mesmo efeito de rodar uma.
+ *    A garantia é dupla: `stripe_events` registra o `event.id` e faz o segundo
+ *    recebimento sair antes do switch, e cada handler segue sendo um `upsert`
+ *    com `onConflict: "workspace_id"` — se o registro falhar, rodar duas vezes
+ *    ainda tem o mesmo efeito de rodar uma.
  * 3. **Status HTTP com significado.** 400 em assinatura inválida (não adianta
  *    reentregar), 200 em evento que não tratamos (senão o Stripe reentrega
  *    para sempre) e 500 só em falha real de escrita, que é onde o retry ajuda.
@@ -70,19 +72,26 @@ export async function POST(req: Request) {
     return Response.json({ error: "Assinatura inválida." }, { status: 400 });
   }
 
+  // Registro do evento **antes** de processá-lo. É o que faz a reentrega sair
+  // por aqui em vez de reexecutar o handler — e o que protegeria um handler
+  // futuro que não fosse idempotente por construção.
+  if (await alreadyProcessed(event)) {
+    return Response.json({ received: true, duplicate: true });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed":
-        await handleCheckoutCompleted(event.data.object, stripe);
+        await handleCheckoutCompleted(event.data.object, stripe, event);
         break;
 
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        await syncSubscription(event.data.object);
+        await syncSubscription(event.data.object, event);
         break;
 
       case "invoice.payment_failed":
-        await handlePaymentFailed(event.data.object, stripe);
+        await handlePaymentFailed(event.data.object, stripe, event);
         break;
 
       default:
@@ -107,6 +116,57 @@ export async function POST(req: Request) {
 }
 
 /**
+ * Registra o evento e diz se ele já tinha sido processado.
+ *
+ * O `insert` é a própria checagem: a primary key em `stripe_events.id` faz a
+ * segunda tentativa falhar com `23505`, e é essa falha que identifica a
+ * reentrega. Um `select` seguido de `insert` teria uma janela entre os dois —
+ * duas entregas simultâneas do mesmo evento passariam ambas pelo select antes
+ * de qualquer insert, e as duas se julgariam a primeira.
+ *
+ * Grava **antes** do handler, e não depois. Gravar depois deixaria a janela
+ * onde a escrita em `subscriptions` já aconteceu mas o evento ainda não consta
+ * como visto — e o retry reexecutaria o handler. O custo dessa escolha é o
+ * inverso: se o processo morrer entre o registro e a escrita, o retry é
+ * descartado como duplicado e o evento se perde. Preferimos esse lado porque
+ * os handlers continuam idempotentes por conta própria (o `upsert` segue lá),
+ * então o dano de reexecutar é zero e o de perder é real.
+ *
+ * Falha de infraestrutura no registro **não** bloqueia o evento: seguimos em
+ * frente e deixamos o handler idempotente absorver uma eventual repetição.
+ * Recusar o evento porque o log de auditoria caiu seria trocar um risco
+ * inexistente por uma assinatura que não é promovida.
+ */
+async function alreadyProcessed(event: Stripe.Event): Promise<boolean> {
+  const admin = createAdminClient();
+
+  const { error } = await admin.from("stripe_events").insert({
+    id: event.id,
+    type: event.type,
+    event_created_at: new Date(event.created * 1000).toISOString(),
+  });
+
+  if (!error) return false;
+
+  // `23505` = unique_violation. O único erro aqui que significa "já vimos".
+  if (error.code === "23505") {
+    console.info("[stripe] evento reentregue, ignorado", {
+      id: event.id,
+      type: event.type,
+    });
+
+    return true;
+  }
+
+  console.error("[stripe] falha ao registrar evento; processando mesmo assim", {
+    id: event.id,
+    error,
+  });
+
+  return false;
+}
+
+/**
  * Fim do checkout. A sessão em si não traz a assinatura expandida, então
  * buscamos a Subscription e caímos no mesmo `syncSubscription()` dos demais
  * eventos — um caminho de escrita só.
@@ -114,6 +174,7 @@ export async function POST(req: Request) {
 async function handleCheckoutCompleted(
   session: Stripe.Checkout.Session,
   stripe: Stripe,
+  event: Stripe.Event,
 ) {
   // Modo `payment` (compra avulsa) não cria assinatura. Hoje o app só faz
   // checkout de subscription, mas o endpoint pode receber outros modos se
@@ -134,6 +195,7 @@ async function handleCheckoutCompleted(
   // assinatura criada à mão no painel, sem metadata nenhum.
   await syncSubscription(
     subscription,
+    event,
     session.metadata?.workspace_id ?? session.client_reference_id ?? undefined,
   );
 }
@@ -146,7 +208,11 @@ async function handleCheckoutCompleted(
  * só refletimos o estado atual da assinatura, para a tela de billing poder
  * avisar que o cartão precisa de atenção.
  */
-async function handlePaymentFailed(invoice: Stripe.Invoice, stripe: Stripe) {
+async function handlePaymentFailed(
+  invoice: Stripe.Invoice,
+  stripe: Stripe,
+  event: Stripe.Event,
+) {
   // A ligação fatura → assinatura mudou de lugar entre versões da API: hoje
   // vem nas linhas da fatura, não num campo `subscription` no topo.
   const line = invoice.lines?.data
@@ -157,7 +223,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice, stripe: Stripe) {
 
   const id = typeof line === "string" ? line : line.id;
 
-  await syncSubscription(await stripe.subscriptions.retrieve(id));
+  await syncSubscription(await stripe.subscriptions.retrieve(id), event);
 }
 
 /**
@@ -168,6 +234,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice, stripe: Stripe) {
  */
 async function syncSubscription(
   subscription: Stripe.Subscription,
+  event: Stripe.Event,
   fallbackWorkspaceId?: string,
 ) {
   const workspaceId = subscription.metadata?.workspace_id ?? fallbackWorkspaceId;
@@ -187,6 +254,33 @@ async function syncSubscription(
   const plan: Plan = status === "canceled" ? "free" : "pro";
 
   const admin = createAdminClient();
+
+  // O Stripe não garante ordem de entrega. Um `customer.subscription.updated`
+  // atrasado pode chegar **depois** do `.deleted` que veio a seguir, e o
+  // upsert cru reporia `active` por cima de um cancelamento já gravado — um
+  // workspace cancelado voltaria a ser Pro sem ninguém pagar.
+  //
+  // A comparação usa `event.created` (relógio do Stripe) contra o `updated_at`
+  // da linha, que é o instante do último evento que a escreveu. Empate passa:
+  // dois eventos no mesmo segundo são o caso comum de uma mudança única, e
+  // reprocessar é inofensivo — os handlers são idempotentes.
+  const eventAt = new Date(event.created * 1000);
+
+  const { data: current } = await admin
+    .from("subscriptions")
+    .select("updated_at")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (current?.updated_at && new Date(current.updated_at) > eventAt) {
+    console.info("[stripe] evento mais antigo que o estado atual, ignorado", {
+      id: event.id,
+      type: event.type,
+      workspaceId,
+    });
+
+    return;
+  }
 
   const { error } = await admin.from("subscriptions").upsert(
     {
