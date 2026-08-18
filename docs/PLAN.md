@@ -668,19 +668,14 @@ teste foram removidos do Stripe e do banco depois.
 
 **O que o M14 deixa em aberto.**
 
-- **Checkout real nunca foi percorrido pelo navegador.** O fluxo foi exercitado
-  criando a assinatura pela API e pagando a fatura, o que dispara os mesmos
-  eventos que o webhook trata — mas ninguém clicou em "Assinar Pro" e digitou
-  um cartão na tela hospedada do Stripe. O que falta cobrir é o trecho entre o
-  clique e o `checkout.session.completed`: a Checkout Session criada com os
-  parâmetros reais e o retorno para `?checkout=success`. Cabe no smoke test do
-  M15, que já prevê o fluxo completo até o upgrade.
+- ~~**Checkout real nunca foi percorrido pelo navegador.**~~ Percorrido em
+  18/08/2026 — ver M14.1 abaixo.
 
 - **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` está no `.env.example` e não é usada
-  por nada.** O Checkout hospedado dispensa Stripe.js no cliente. A variável
-  fica porque o M15 pode querer o Payment Element embutido; se não quiser, o
-  certo é removê-la em vez de deixar uma chave inerte documentada como se
-  fosse necessária.
+  por nada.** O Checkout hospedado dispensa Stripe.js no cliente. Mantida por
+  decisão explícita do dono do projeto; segue sem consumidor e fora do schema
+  Zod de `lib/env.ts`, então quem for usar o Payment Element no M15 precisa
+  adicioná-la lá antes.
 
 - ~~**Sem proteção explícita contra replay de eventos antigos.**~~ Fechado na
   `feat/billing-nextjs` — ver M14.1 abaixo.
@@ -769,11 +764,19 @@ antiguidade foi exercitada nos três casos sobre uma linha real — evento mais
 velho descartado, mais novo aplicado, empate aplicado. Os dados de teste foram
 removidos depois. `tsc`, `next lint` e `next build` limpos.
 
-**Aberto no M14.1:** o checkout pelo navegador continua sem ser percorrido — o
-trecho entre o clique em "Assinar Pro" e o `checkout.session.completed` exige
-interação manual com a tela hospedada do Stripe. A Stripe CLI foi instalada
-depois (`winget install --id Stripe.StripeCli`), mas o fluxo ainda não foi
-exercitado de ponta a ponta. Segue no smoke test do M15.
+**Checkout percorrido pelo navegador — fechado.** Era a última pendência do
+M14, aberta desde então porque exigia interação manual com a tela hospedada do
+Stripe. Percorrido em 18/08/2026 às 21:55: clique em "Assinar Pro", cartão
+digitado na tela do Stripe, retorno em `?checkout=success` e o webhook
+promovendo o workspace — `plan = pro`, `status = active`,
+`stripe_subscription_id = sub_1U5uyX…`, `current_period_end` em 18/09/2026. O
+Customer Portal também foi aberto às 22:03
+(`billing_portal.session.created`).
+
+O tráfego real confirmou de passagem o que o M14.1 só tinha exercitado em
+teste: **15 eventos gravados em `stripe_events`**, cada um com id próprio, o
+`checkout.session.completed` entre eles. A idempotência está valendo sobre
+eventos de verdade, não só sobre inserts sintéticos.
 
 ---
 
@@ -832,15 +835,68 @@ com `42501`; e o join que busca os admins resolveu um destinatário real. Dados
 de teste removidos e os três workspaces conferidos de volta em `free/active`
 depois. `tsc`, `next lint` e `next build` limpos.
 
-**Não verificado:** o banner não foi visto renderizado no navegador. Ele exige
-sessão autenticada e o middleware redireciona `/dashboard` para `/login` sem
-ela — forcei `past_due` no banco, mas não consigo logar como usuário para
-carregar a tela. Falta olhar em duas contas (admin e membro comum), já que o
-link "Atualizar cartão" só aparece para admin. Também não houve envio real pelo
-Resend: `RESEND_FROM_EMAIL` usa domínio não verificado, a mesma pendência que o
-M15 já registra.
+**Não verificado:** o `PastDueBanner` nunca foi visto renderizado. Ele só
+aparece com `status = past_due`, e a assinatura real nasceu `active` — forçar o
+status no banco exibiria o banner, mas mexeria numa assinatura viva. Falta
+também olhar em conta de membro comum, já que o link "Atualizar cartão" só
+aparece para admin. E não houve envio real pelo Resend: `RESEND_FROM_EMAIL` usa
+domínio não verificado, a mesma pendência que o M15 já registra — em dev o
+envio devolve `not_configured` e segue sem erro, por desenho. `payment_alerts`
+segue vazia, o que é o esperado: nenhuma cobrança falhou.
 
 ---
+
+---
+
+### M14.3 · Limites de plano e página de cobrança
+
+**Branch:** `feat/billing-nextjs`
+
+- [x] `lib/limits.ts` com `canAddLead()`, `canAddMember()` e `canAcceptInvite()`
+- [x] Rota `/settings/billing` com plano, medidores de uso e comparação
+- [x] `PlanComparison` compartilhada entre `/settings` e `/settings/billing`
+
+**A regra estava certa e espalhada.** Os limites do Free já eram checados no
+servidor nos três pontos de escrita — criar lead, convidar, aceitar convite —,
+mas remontados à mão em cinco lugares, cada um repetindo "lê o plano, conta,
+compara" e reescrevendo a mensagem de recusa. Cinco cópias de uma regra de
+cobrança são cinco chances de uma divergir, e a que divergisse viraria bug de
+receita. A consolidação tirou 64 linhas a mais do que acrescentou.
+
+**Objeto, não booleano.** Quem chama nunca quer só "pode?": a action precisa da
+mensagem de recusa e a tela precisa do número para o medidor. Com booleano os
+dois contariam de novo — duas queries onde há uma, e a segunda podendo
+discordar da primeira. É união discriminada para `message` ser `string` depois
+de `if (!allowed)`, sem fallback em cinco chamadas.
+
+**`canAcceptInvite()` à parte.** O aceite é o único ponto sem sessão do lado de
+dentro: quem aceita ainda não é membro, a policy `subscriptions_select_member`
+recusaria a leitura e não há workspace no cookie. Conta só membros, sem os
+pendentes — o convite de quem está aceitando é um deles, e somá-lo faria a
+pessoa contar duas vezes, barrando o último assento livre.
+
+**Um bug de cache apareceu no caminho.** O card de plano da sidebar lia
+`activeWorkspace.plan`, o cache denormalizado, e não `getEffectivePlan()`. É a
+mesma divergência que o M14 corrigiu nos outros pontos e que este passou
+batido: com o cache fora de sincronia, um assinante Pro veria "fazer upgrade".
+Passou a receber o plano efetivo do layout.
+
+**A comparação é um componente, não JSX duplicado.** Nasceu inline em
+`/settings/billing` e foi extraída para `PlanComparison` quando passou a
+aparecer também em `/settings`. Duas cópias divergiriam no dia em que um
+recurso entrasse na lista, e a tela desatualizada estaria prometendo errado
+sobre o que o cliente paga. A lista de recursos mora dentro do componente e não
+vem por prop — não há caso em que as duas telas devam comparar coisas
+diferentes.
+
+**Verificado rodando:** a aritmética dos limites conferida contra os três
+workspaces reais, incluindo o caso de 1 membro + 1 convite pendente = 2
+assentos com `canAddMember = false` — assentos comprometidos, não só ocupados.
+As duas rotas compilam e respondem no dev server. `tsc`, `next lint` e
+`next build` limpos.
+
+**Não verificado:** as telas não foram vistas em conta de membro comum, onde os
+botões de cobrança somem e o texto muda para "peça a um administrador".
 
 ---
 
