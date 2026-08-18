@@ -600,20 +600,100 @@ real; apagá-los é decisão para quando o seed tiver outra origem.
 
 ### M14 · Stripe
 
-**Branch:** `feat/m14-stripe`
+**Branch:** `feat/billing` (o plano previa `feat/m14-stripe`)
 
 **Objetivo:** monetização ativa — upgrade, downgrade e limites aplicados.
 
-- [ ] Produtos e preços criados no Stripe (Pro, R$ 49/mês)
-- [ ] Server Action de checkout criando a Checkout Session com `workspace_id` no metadata
-- [ ] `app/api/stripe/webhook/route.ts` com verificação de assinatura e handler idempotente
-- [ ] Eventos tratados: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
-- [ ] Tabela `subscriptions` atualizada pelo webhook usando service-role key (único lugar permitido)
-- [ ] Customer Portal para gerenciar/cancelar assinatura
-- [ ] Limites do Free aplicados no servidor; Pro sem limite
-- [ ] Testado com Stripe CLI (`stripe listen`) e cartões de teste
+- [x] Produtos e preços criados no Stripe (Pro, R$ 50/mês — ver nota sobre o preço)
+- [x] Server Action de checkout criando a Checkout Session com `workspace_id` no metadata
+- [x] `app/api/stripe/webhook/route.ts` com verificação de assinatura e handler idempotente
+- [x] Eventos tratados: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- [x] Tabela `subscriptions` atualizada pelo webhook usando service-role key (único lugar permitido)
+- [x] Customer Portal para gerenciar/cancelar assinatura
+- [x] Limites do Free aplicados no servidor; Pro sem limite
+- [x] Testado com Stripe CLI (`stripe listen`) e cartões de teste
 
-**Commit final:** `feat: assinaturas via Stripe Checkout, webhook e Customer Portal`
+**Commits.** Saiu em dois, e não no único que o plano previa. A integração com
+o Stripe e a unificação da fonte do plano são mudanças de natureza diferente —
+a segunda corrige uma divergência que já existia, em código que o Stripe não
+toca —, e um commit só esconderia as duas:
+
+1. `feat: checkout do Stripe e webhook de assinaturas`
+2. `refactor: subscriptions como fonte única do plano`
+
+Dois arquivos (`settings/actions.ts` e `settings/page.tsx`) tinham as duas
+mudanças no mesmo diff. Cada um entrou no primeiro commit numa versão
+intermediária — já com `requireAdmin()` extraído e a UI de billing, mas ainda
+lendo `workspace.plan` —, para que o commit compile sozinho. Verificado
+exportando a árvore staged (`git checkout-index`) e rodando `tsc` isolado.
+
+**Fonte única do plano.** Até o M13 o plano era lido de duas colunas
+diferentes: `subscription.plan` na criação de lead e `workspaces.plan` no
+convite e na tela de settings. As duas concordavam só porque nada escrevia em
+`subscriptions` — tudo era Free. Com o webhook gravando, a divergência viraria
+bug de cobrança nos dois sentidos: um assinante Pro seguiria barrado de
+convidar, e um ex-assinante (`plan = 'pro'`, `status = 'canceled'`) continuaria
+criando leads sem limite, porque a leitura crua da coluna ignora o status.
+
+`subscriptions` passou a ser a fonte da verdade, com a regra concentrada em
+`resolvePlan()` (`lib/stripe/plan.ts`) e exposta por `getEffectivePlan()`.
+`workspaces.plan` continua existindo como cache denormalizado, sincronizado
+pelo webhook na mesma escrita. Os três pontos de checagem de limite passaram a
+usar a fonte única; o aceite de convite lê pelo cliente admin, porque quem
+aceita ainda não é membro e a policy recusaria a leitura com a sessão dele.
+
+**`past_due` não rebaixa.** `active`, `trialing` e `past_due` liberam o Pro;
+só `canceled` encerra. Derrubar alguém no primeiro retry falho de cobrança
+apagaria acesso a dados por um cartão que vence amanhã — quem decide o fim é o
+dunning do Stripe, e a tela de billing avisa que o cartão precisa de atenção.
+
+**Preço: R$ 50, não R$ 49.** O `STRIPE_PRICE_ID_PRO` do `.env.local` apontava
+para um **product** (`prod_…`) em vez de um **price** (`price_…`) — o checkout
+teria falhado na primeira tentativa. O preço real cadastrado no Stripe é de
+R$ 50,00/mês, e a UI foi alinhada a ele: o número virou
+`PRO_PLAN_PRICE_BRL` em `lib/constants.ts`, porque estava cravado tanto na
+landing quanto na tela de billing e já havia divergido do Stripe uma vez.
+
+**`current_period_end` mora nos items.** Na API `2026-07-29.dahlia` o campo
+saiu da Subscription e passou para os subscription items, que podem ter ciclos
+diferentes. `periodEnd()` pega o menor. A `apiVersion` fica fixada no cliente
+justamente para essa classe de mudança não chegar por um `npm update`.
+
+**Verificado rodando**, com `stripe listen` encaminhando para o dev server: 15
+eventos entregues, todos 200; assinatura paga promoveu `subscriptions` e
+`workspaces` a `pro` com `current_period_end` correto; a reentrega do mesmo
+evento atualizou a linha existente sem duplicar (mesmo `id`, só `updated_at`
+avançou); o cancelamento rebaixou as duas tabelas para `free`. Os dados de
+teste foram removidos do Stripe e do banco depois.
+
+**O que o M14 deixa em aberto.**
+
+- **Checkout real nunca foi percorrido pelo navegador.** O fluxo foi exercitado
+  criando a assinatura pela API e pagando a fatura, o que dispara os mesmos
+  eventos que o webhook trata — mas ninguém clicou em "Assinar Pro" e digitou
+  um cartão na tela hospedada do Stripe. O que falta cobrir é o trecho entre o
+  clique e o `checkout.session.completed`: a Checkout Session criada com os
+  parâmetros reais e o retorno para `?checkout=success`. Cabe no smoke test do
+  M15, que já prevê o fluxo completo até o upgrade.
+
+- **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` está no `.env.example` e não é usada
+  por nada.** O Checkout hospedado dispensa Stripe.js no cliente. A variável
+  fica porque o M15 pode querer o Payment Element embutido; se não quiser, o
+  certo é removê-la em vez de deixar uma chave inerte documentada como se
+  fosse necessária.
+
+- **Sem proteção explícita contra replay de eventos antigos.** A tolerância
+  padrão do `constructEvent` (5 minutos sobre o timestamp assinado) já barra a
+  reapresentação de um payload capturado, e o `upsert` torna a reentrega
+  inofensiva. O que não existe é registro de `event.id` processado — o que só
+  passaria a importar se algum handler deixasse de ser idempotente, ou se
+  eventos fora de ordem precisassem ser descartados por antiguidade.
+
+- **Banner de upgrade não aparece nas telas de leads e membros.** Ao bater o
+  teto do Free, as duas telas mostram a mensagem de limite (M7), mas o caminho
+  para assinar existe só em `/settings`. Levar o `UpgradeButton` até lá é
+  trabalho de UI, e o lugar dele é a revisão de estados vazios e mensagens do
+  M15.
 
 ---
 
@@ -633,6 +713,13 @@ real; apagá-los é decisão para quando o seed tiver outra origem.
 - [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
       ver nota abaixo
 - [ ] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
+      — o upgrade aqui precisa ser o checkout percorrido pelo **navegador**, com
+      cartão de teste na tela do Stripe: é o único trecho do M14 que a
+      verificação por API não cobriu
+- [ ] Decidir sobre `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: usar (Payment Element)
+      ou remover do `.env.example` — hoje está documentada e inerte
+- [ ] Levar o botão de upgrade às telas de leads e membros ao bater o teto do
+      Free; hoje o caminho para assinar existe só em `/settings`
 - [ ] README final com setup, variáveis e comandos
 
 **Commit final:** `chore: polimento final e deploy em produção`

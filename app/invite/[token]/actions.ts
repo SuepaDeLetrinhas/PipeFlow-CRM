@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import type { ActionResult } from "@/lib/actions/result";
 import { FREE_PLAN_LIMITS } from "@/lib/constants";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { resolvePlan } from "@/lib/stripe/plan";
 import { createClient } from "@/lib/supabase/server";
 import { acceptInviteSchema } from "@/lib/validations/invite";
 import { WORKSPACE_COOKIE, workspaceCookieOptions } from "@/lib/workspace-cookie";
@@ -135,7 +136,7 @@ export async function acceptInviteAction(
   // pode estar velho. Quem autoriza a escrita é esta consulta.
   const { data: invite } = await admin
     .from("invites")
-    .select("id, workspace_id, email, role, status, expires_at, workspaces (plan)")
+    .select("id, workspace_id, email, role, status, expires_at")
     .eq("token", parsed.data.token)
     .maybeSingle();
 
@@ -176,7 +177,20 @@ export async function acceptInviteAction(
     // O limite do plano é reconferido no aceite, e não só no convite: entre o
     // envio e o clique podem ter entrado outras pessoas, e é o aceite que de
     // fato ocupa o assento.
-    if (invite.workspaces?.plan === "free") {
+    //
+    // O plano vem de `subscriptions`, a fonte da verdade, e não do join com
+    // `workspaces` — mesma unificação feita no M14 nas outras duas checagens
+    // de limite. Aqui a leitura é pelo cliente admin, e não por
+    // `getEffectivePlan()`: quem aceita o convite ainda **não é membro**, então
+    // a policy `subscriptions_select_member` recusaria a leitura com a sessão
+    // dele, e não há workspace ativo no cookie para a função resolver.
+    const { data: subscription } = await admin
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("workspace_id", invite.workspace_id)
+      .maybeSingle();
+
+    if (resolvePlan(subscription) === "free") {
       const { count } = await admin
         .from("workspace_members")
         .select("id", { count: "exact", head: true })

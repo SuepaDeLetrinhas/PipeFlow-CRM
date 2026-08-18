@@ -2,9 +2,11 @@ import { cache } from "react";
 
 import { cookies } from "next/headers";
 
+import { resolvePlan } from "@/lib/stripe/plan";
 import { createClient } from "@/lib/supabase/server";
 import { WORKSPACE_COOKIE } from "@/lib/workspace-cookie";
 import type {
+  Plan,
   Subscription,
   User,
   Workspace,
@@ -177,7 +179,11 @@ export async function getMembers(): Promise<WorkspaceMember[]> {
  *
  * Somente leitura por construção: `subscriptions` não tem policy de
  * insert/update para `authenticated`. Quem escreve é o webhook do Stripe com a
- * service-role, no M14.
+ * service-role (`app/api/stripe/webhook/route.ts`).
+ *
+ * Quem quer saber o plano deve chamar `getEffectivePlan()`, não ler `.plan`
+ * daqui direto: só ela aplica a regra de status (uma assinatura `canceled`
+ * ainda tem `plan = 'pro'` na linha).
  */
 export async function getSubscription(): Promise<Subscription | null> {
   const workspace = await getCurrentWorkspace();
@@ -196,3 +202,25 @@ export async function getSubscription(): Promise<Subscription | null> {
 
   return data ?? null;
 }
+
+/**
+ * Plano em vigor no workspace ativo — **a única fonte que os limites devem
+ * consultar**.
+ *
+ * Existe para acabar com a divergência que o M14 tornaria visível: antes dele,
+ * a criação de lead lia `subscription.plan` e o convite lia `workspaces.plan`.
+ * As duas colunas concordavam só porque nada escrevia na primeira. Com o
+ * webhook do Stripe gravando, um workspace pago passaria a criar leads sem
+ * limite e continuar impedido de convidar.
+ *
+ * `cache()` porque a tela de settings e as actions de limite chamam esta
+ * função no mesmo render; sem ele seriam três SELECTs idênticos por request.
+ *
+ * A regra de qual status vale como pago mora em `resolvePlan()`, compartilhada
+ * com o webhook — ver os comentários lá.
+ */
+export const getEffectivePlan = cache(async function getEffectivePlan(): Promise<Plan> {
+  const subscription = await getSubscription();
+
+  return resolvePlan(subscription);
+});

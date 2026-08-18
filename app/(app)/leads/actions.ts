@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { toFieldErrors, type ActionResult } from "@/lib/actions/result";
 import { FREE_PLAN_LIMITS } from "@/lib/constants";
 import { countLeads } from "@/lib/data/leads";
-import { getCurrentUser, getCurrentWorkspace, getSubscription } from "@/lib/data/workspaces";
+import {
+  getCurrentUser,
+  getCurrentWorkspace,
+  getEffectivePlan,
+} from "@/lib/data/workspaces";
 import { createClient } from "@/lib/supabase/server";
 import {
   activitySchema,
@@ -61,11 +65,12 @@ export async function createLeadAction(input: unknown): Promise<ActionResult> {
   // Limite do plano Free checado NO SERVIDOR antes do insert. A tela do M7
   // também esconde o botão ao atingir o teto, mas isso é conveniência: quem
   // chamar a action direto passaria por cima.
-  const subscription = await getSubscription();
-  // Ausência de assinatura é tratada como Free — o mais restritivo.
-  const plan = subscription?.plan ?? "free";
-
-  if (plan === "free") {
+  //
+  // `getEffectivePlan()`, e não `subscription.plan` direto como até o M13:
+  // uma assinatura cancelada mantém `plan = 'pro'` na linha, e ler a coluna
+  // crua deixaria o ex-assinante criando leads sem limite para sempre. A
+  // regra de status mora em `resolvePlan()`, junto com a do webhook.
+  if ((await getEffectivePlan()) === "free") {
     const total = await countLeads();
 
     if (total >= FREE_PLAN_LIMITS.leads) {

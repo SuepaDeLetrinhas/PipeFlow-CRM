@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/actions/require-admin";
 import { type ActionResult, toFieldErrors } from "@/lib/actions/result";
 import { FREE_PLAN_LIMITS } from "@/lib/constants";
-import { getSeatUsage } from "@/lib/data";
+import { getEffectivePlan, getSeatUsage } from "@/lib/data";
 import { sendInviteEmail } from "@/lib/email/send-invite";
 import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -74,13 +74,11 @@ export async function inviteMemberAction(
   // --- Limite do plano ------------------------------------------------------
   // Checado no servidor antes da escrita, como manda o CLAUDE.md, contando
   // membros + convites pendentes: assentos comprometidos, não só ocupados.
-  const { data: workspace } = await supabase
-    .from("workspaces")
-    .select("plan")
-    .eq("id", workspaceId)
-    .maybeSingle();
-
-  if (workspace?.plan === "free") {
+  //
+  // `getEffectivePlan()`, e não `workspaces.plan` como até o M13: a fonte da
+  // verdade é `subscriptions`, e ler a coluna do workspace faria um assinante
+  // Pro seguir barrado aqui se o cache denormalizado saísse de sincronia.
+  if ((await getEffectivePlan()) === "free") {
     const usage = await getSeatUsage();
 
     if (usage.total >= FREE_PLAN_LIMITS.members) {

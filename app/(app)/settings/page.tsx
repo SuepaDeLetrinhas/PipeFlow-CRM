@@ -16,6 +16,7 @@ import {
   getCurrentMember,
   getCurrentUser,
   getCurrentWorkspace,
+  getEffectivePlan,
   getMembers,
   getPendingInvites,
   getSeatUsage,
@@ -40,12 +41,17 @@ export const metadata: Metadata = { title: "Configurações" };
  * policy no Postgres.
  */
 export default async function SettingsPage() {
-  const [workspace, currentUser, currentMember, members, subscription] =
+  const [workspace, currentUser, currentMember, members, plan, subscription] =
     await Promise.all([
       getCurrentWorkspace(),
       getCurrentUser(),
       getCurrentMember(),
       getMembers(),
+      // O plano vem de `subscriptions` via `getEffectivePlan()`, e não de
+      // `workspace.plan`: a coluna do workspace é cache mantido pelo webhook, e
+      // a tela que decide mostrar "upgrade" ou "gerenciar" precisa da fonte da
+      // verdade.
+      getEffectivePlan(),
       getSubscription(),
     ]);
 
@@ -62,14 +68,14 @@ export default async function SettingsPage() {
     ? await Promise.all([getPendingInvites(), getSeatUsage()])
     : [[], null];
 
-  const isFree = workspace.plan === "free";
+  const isFree = plan === "free";
   const seatsFull = isFree && (usage?.total ?? 0) >= FREE_PLAN_LIMITS.members;
 
   return (
     <>
       <PageHeader
         title="Configurações"
-        description={`${workspace.name} · plano ${PLAN_LABELS[workspace.plan]}`}
+        description={`${workspace.name} · plano ${PLAN_LABELS[plan]}`}
       />
 
       <div className="space-y-8">
@@ -240,9 +246,7 @@ export default async function SettingsPage() {
                 <CreditCard className="size-4 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm font-medium">
-                  {PLAN_LABELS[workspace.plan]}
-                </p>
+                <p className="text-sm font-medium">{PLAN_LABELS[plan]}</p>
                 <p className="text-xs text-muted-foreground">
                   {isFree
                     ? `Até ${FREE_PLAN_LIMITS.members} pessoas e ${FREE_PLAN_LIMITS.leads} leads.`
