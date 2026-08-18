@@ -3,13 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { toFieldErrors, type ActionResult } from "@/lib/actions/result";
-import { FREE_PLAN_LIMITS } from "@/lib/constants";
-import { countLeads } from "@/lib/data/leads";
-import {
-  getCurrentUser,
-  getCurrentWorkspace,
-  getEffectivePlan,
-} from "@/lib/data/workspaces";
+import { getCurrentUser, getCurrentWorkspace } from "@/lib/data/workspaces";
+import { canAddLead } from "@/lib/limits";
 import { createClient } from "@/lib/supabase/server";
 import {
   activitySchema,
@@ -62,23 +57,17 @@ export async function createLeadAction(input: unknown): Promise<ActionResult> {
 
   if (!workspace) return SEM_WORKSPACE;
 
-  // Limite do plano Free checado NO SERVIDOR antes do insert. A tela do M7
-  // também esconde o botão ao atingir o teto, mas isso é conveniência: quem
-  // chamar a action direto passaria por cima.
+  // Limite do plano Free checado NO SERVIDOR antes do insert. A tela também
+  // avisa ao atingir o teto, mas isso é conveniência: quem chamar a action
+  // direto passaria por cima.
   //
-  // `getEffectivePlan()`, e não `subscription.plan` direto como até o M13:
-  // uma assinatura cancelada mantém `plan = 'pro'` na linha, e ler a coluna
-  // crua deixaria o ex-assinante criando leads sem limite para sempre. A
-  // regra de status mora em `resolvePlan()`, junto com a do webhook.
-  if ((await getEffectivePlan()) === "free") {
-    const total = await countLeads();
+  // A regra mora em `canAddLead()` (`lib/limits.ts`), junto com a do convite e
+  // a das telas — inclusive a leitura do plano por `getEffectivePlan()`, que
+  // ignora `plan = 'pro'` de assinatura cancelada.
+  const limit = await canAddLead();
 
-    if (total >= FREE_PLAN_LIMITS.leads) {
-      return {
-        ok: false,
-        message: `O plano Free permite ${FREE_PLAN_LIMITS.leads} leads. Faça upgrade para o Pro para cadastrar mais.`,
-      };
-    }
+  if (!limit.allowed) {
+    return { ok: false, message: limit.message };
   }
 
   const supabase = await createClient();

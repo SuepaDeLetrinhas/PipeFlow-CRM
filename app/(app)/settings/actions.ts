@@ -6,10 +6,9 @@ import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/actions/require-admin";
 import { type ActionResult, toFieldErrors } from "@/lib/actions/result";
-import { FREE_PLAN_LIMITS } from "@/lib/constants";
-import { getEffectivePlan, getSeatUsage } from "@/lib/data";
 import { sendInviteEmail } from "@/lib/email/send-invite";
 import { env } from "@/lib/env";
+import { canAddMember } from "@/lib/limits";
 import { createClient } from "@/lib/supabase/server";
 import {
   inviteIdSchema,
@@ -72,21 +71,14 @@ export async function inviteMemberAction(
   const supabase = await createClient();
 
   // --- Limite do plano ------------------------------------------------------
-  // Checado no servidor antes da escrita, como manda o CLAUDE.md, contando
-  // membros + convites pendentes: assentos comprometidos, não só ocupados.
-  //
-  // `getEffectivePlan()`, e não `workspaces.plan` como até o M13: a fonte da
-  // verdade é `subscriptions`, e ler a coluna do workspace faria um assinante
-  // Pro seguir barrado aqui se o cache denormalizado saísse de sincronia.
-  if ((await getEffectivePlan()) === "free") {
-    const usage = await getSeatUsage();
+  // Checado no servidor antes da escrita, como manda o CLAUDE.md. A regra mora
+  // em `canAddMember()` (`lib/limits.ts`), que conta membros + convites
+  // pendentes — assentos comprometidos, não só ocupados — e lê o plano de
+  // `subscriptions`, não do cache em `workspaces.plan`.
+  const limit = await canAddMember();
 
-    if (usage.total >= FREE_PLAN_LIMITS.members) {
-      return {
-        ok: false,
-        message: `O plano Free permite ${FREE_PLAN_LIMITS.members} pessoas no workspace. Revogue um convite pendente ou faça upgrade para o Pro.`,
-      };
-    }
+  if (!limit.allowed) {
+    return { ok: false, message: limit.message };
   }
 
   // --- Já é membro? ---------------------------------------------------------
