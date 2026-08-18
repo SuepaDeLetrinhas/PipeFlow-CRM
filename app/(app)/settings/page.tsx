@@ -5,6 +5,7 @@ import Link from "next/link";
 import { InviteForm } from "@/components/settings/invite-form";
 import { InviteRowActions } from "@/components/settings/invite-row-actions";
 import { MemberRowActions } from "@/components/settings/member-row-actions";
+import { PlanComparison } from "@/components/settings/plan-comparison";
 import { UsageMeter } from "@/components/settings/usage-meter";
 import { UpgradePrompt } from "@/components/settings/upgrade-prompt";
 import { PageHeader } from "@/components/layout/page-header";
@@ -276,6 +277,11 @@ export default async function SettingsPage() {
             </p>
           ) : null}
         </section>
+
+        {/* Mesma tabela de /settings/billing, pelo mesmo componente: quem está
+            aqui decidindo sobre o plano não deveria precisar de outra tela
+            para saber o que muda ao assinar. */}
+        <PlanComparison plan={plan} canUpgrade={Boolean(isAdmin)} />
       </div>
     </>
   );

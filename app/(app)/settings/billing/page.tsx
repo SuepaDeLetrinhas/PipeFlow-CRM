@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ArrowLeft, Check, CreditCard, Minus } from "lucide-react";
+import { ArrowLeft, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -7,14 +7,11 @@ import {
   ManageBillingButton,
   UpgradeButton,
 } from "@/components/settings/billing-actions";
+import { PlanComparison } from "@/components/settings/plan-comparison";
 import { UsageMeter } from "@/components/settings/usage-meter";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  FREE_PLAN_LIMITS,
-  PLAN_LABELS,
-  PRO_PLAN_PRICE_BRL,
-} from "@/lib/constants";
+import { PLAN_LABELS, PRO_PLAN_PRICE_BRL } from "@/lib/constants";
 import { getCurrentMember, getEffectivePlan, getSubscription } from "@/lib/data";
 import { canAddLead, canAddMember } from "@/lib/limits";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -146,115 +143,8 @@ export default async function BillingPage() {
           </div>
         </section>
 
-        {/* --- Comparação --------------------------------------------------- */}
-        <section className="rounded-xl border bg-card">
-          <header className="p-5">
-            <h2 className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
-              Free &times; Pro
-            </h2>
-          </header>
-
-          <Separator />
-
-          {/* Tabela em overflow próprio: em telas estreitas ela rola sozinha
-              em vez de esticar a página inteira. */}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[420px] text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="p-4 text-left font-medium text-muted-foreground">
-                    Recurso
-                  </th>
-                  <th className="p-4 text-left font-medium">
-                    Free
-                    {isFree ? (
-                      <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                        atual
-                      </span>
-                    ) : null}
-                  </th>
-                  <th className="p-4 text-left font-medium">
-                    Pro
-                    {!isFree ? (
-                      <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                        atual
-                      </span>
-                    ) : null}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <ComparisonRow
-                  feature="Leads"
-                  free={`Até ${FREE_PLAN_LIMITS.leads}`}
-                  pro="Ilimitados"
-                />
-                <ComparisonRow
-                  feature="Pessoas no workspace"
-                  free={`Até ${FREE_PLAN_LIMITS.members}`}
-                  pro="Ilimitadas"
-                />
-                <ComparisonRow feature="Pipeline Kanban" free pro />
-                <ComparisonRow feature="Dashboard de métricas" free pro />
-                <ComparisonRow feature="Timeline de atividades" free pro />
-                <ComparisonRow
-                  feature="Preço"
-                  free={formatCurrency(0)}
-                  pro={`${formatCurrency(PRO_PLAN_PRICE_BRL)}/mês`}
-                />
-              </tbody>
-            </table>
-          </div>
-
-          {isFree && isAdmin ? (
-            <>
-              <Separator />
-              <div className="p-5">
-                <UpgradeButton />
-              </div>
-            </>
-          ) : null}
-        </section>
+        <PlanComparison plan={plan} canUpgrade={Boolean(isAdmin)} />
       </div>
     </>
-  );
-}
-
-/**
- * Uma linha da comparação. `true` vira check, `false` vira traço, string vira o
- * próprio texto — assim recurso incluído e recurso quantificado usam a mesma
- * linha, sem dois componentes quase iguais.
- */
-function ComparisonRow({
-  feature,
-  free,
-  pro,
-}: {
-  feature: string;
-  free: string | boolean;
-  pro: string | boolean;
-}) {
-  return (
-    <tr className="border-b last:border-0">
-      <td className="p-4 text-muted-foreground">{feature}</td>
-      <td className="p-4">
-        <ComparisonCell value={free} />
-      </td>
-      <td className="p-4">
-        <ComparisonCell value={pro} />
-      </td>
-    </tr>
-  );
-}
-
-function ComparisonCell({ value }: { value: string | boolean }) {
-  if (typeof value === "string") {
-    return <span className="tabular-nums">{value}</span>;
-  }
-
-  return value ? (
-    <Check className="size-4 text-success" aria-label="Incluído" />
-  ) : (
-    <Minus className="size-4 text-muted-foreground" aria-label="Não incluído" />
   );
 }
