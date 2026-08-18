@@ -413,12 +413,26 @@ Sem isso, "o Resend não está configurado" viraria "não é possível convidar"
 o fluxo ficaria intestável até o domínio de envio existir. `RESEND_API_KEY` é
 opcional em `lib/env.ts` pela mesma razão.
 
-⚠️ **Não exercitado de ponta a ponta:** o **envio real do e-mail** depende de
-`RESEND_API_KEY` e de um domínio verificado no Resend, que ainda não existem —
-o caminho `not_configured` (link copiável) é o que roda hoje. Os quatro estados
-da rota de aceite (válido, expirado, já usado, sem sessão) foram verificados
-contra o banco real; o **aceite com sessão** depende de logar com o e-mail
-convidado e não foi percorrido.
+**Verificado contra Resend e Supabase reais.** O envio saiu de verdade
+(`delivered` no dashboard do Resend, com o link, o CTA e o accent da marca no
+corpo entregue); o aceite com sessão criou o vínculo em `workspace_members` e
+marcou o convite como `accepted`; a remoção por admin tirou o acesso na hora,
+confirmado sob RLS. Também exercitados: limite do Free em 2/2, membro comum
+recusado por papel, `protect_workspace_owner` barrando rebaixar/remover o dono
+inclusive vindo de outro admin, convite duplicado, "já é membro" e link
+encaminhado para a conta errada.
+
+Três defeitos apareceram só nesse teste, todos corrigidos: revoke/remove/role
+devolviam `ok: true` para id de outro workspace (zero linhas afetadas não é
+erro no PostgREST — os dados estavam protegidos, mas a UI mostraria sucesso
+falso); o preview conferia membership antes do e-mail, escondendo que o link
+era de outra pessoa; e `invalid_type_error` não alcança `invalid_enum_value`
+num `z.enum`, vazando a mensagem do Zod em inglês.
+
+⚠️ **Envio para terceiros ainda não funciona.** O remetente é o sandbox
+`onboarding@resend.dev`, que entrega apenas para o dono da conta Resend —
+convite para outro endereço volta com `emailDelivered: false` e usa o link
+manual. Depende de domínio verificado; está no M15, junto com a URL pública.
 
 **O admin não é criado pela Server Action:** quem insere o vínculo é o trigger
 `handle_new_workspace` do M8. Fazê-lo na action seria impossível — a policy de
@@ -616,10 +630,31 @@ real; apagá-los é decisão para quando o seed tiver outra origem.
 - [ ] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key exposta ao cliente
 - [ ] Variáveis de ambiente configuradas na Vercel (preview e production)
 - [ ] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando para a URL final
+- [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
+      ver nota abaixo
 - [ ] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
 - [ ] README final com setup, variáveis e comandos
 
 **Commit final:** `chore: polimento final e deploy em produção`
+
+**Pendência herdada do M10 — envio de convite para terceiros.** O fluxo de
+convite funciona ponta a ponta, mas hoje o remetente é o sandbox
+`onboarding@resend.dev`, que entrega **apenas** para o e-mail dono da conta
+Resend. Convite para qualquer outro endereço volta com `emailDelivered: false`
+e cai no fluxo do link manual (a tela mostra o link para o admin repassar) —
+verificado rodando.
+
+Destravar exige um domínio próprio verificado em resend.com/domains (SPF +
+DKIM no DNS) e o `RESEND_FROM_EMAIL` apontando para um endereço dele. Cabe
+aqui, e não antes, porque o `NEXT_PUBLIC_SITE_URL` muda no mesmo momento: os
+links dentro do e-mail de convite hoje apontam para `localhost:3000` e só
+passam a valer para outra pessoa quando houver URL pública. Configurar DNS
+antes disso seria fazer o trabalho duas vezes.
+
+`localhost` não pode ser usado como remetente — o provedor do destinatário
+valida SPF/DKIM por DNS público, que não existe para localhost. As duas
+variáveis são independentes: o app pode seguir em localhost enquanto o
+remetente é um domínio real.
 
 ---
 
