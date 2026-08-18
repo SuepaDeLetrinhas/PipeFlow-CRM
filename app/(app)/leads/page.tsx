@@ -9,8 +9,15 @@ import { LeadsPagination } from "@/components/leads/leads-pagination";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { LeadsTableSkeleton } from "@/components/leads/leads-table-skeleton";
 import { NewLeadButton } from "@/components/leads/new-lead-button";
+import { UpgradePrompt } from "@/components/settings/upgrade-prompt";
 import { LEAD_STATUS_LABELS } from "@/lib/constants";
-import { getCurrentUser, getLeadsPage, getMembers } from "@/lib/data";
+import {
+  getCurrentMember,
+  getCurrentUser,
+  getLeadsPage,
+  getMembers,
+} from "@/lib/data";
+import { canAddLead } from "@/lib/limits";
 import {
   DEFAULT_LEAD_SORT,
   type LeadFilters,
@@ -139,9 +146,15 @@ async function LeadsResults({
 }
 
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
-  const [currentUser, members] = await Promise.all([
+  const [currentUser, currentMember, members, leadLimit] = await Promise.all([
     getCurrentUser(),
+    getCurrentMember(),
     getMembers(),
+    // A mesma checagem que a Server Action faz antes de gravar — tela e
+    // servidor não podem discordar sobre o teto. A contagem é a do workspace
+    // inteiro, não a da página: com filtro ativo, o `total` do resultado
+    // mostraria um número menor que o real.
+    canAddLead(),
   ]);
 
   const owners = members.map((member) => member.user);
@@ -168,6 +181,23 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       <PageHeader title="Leads" description="Contatos deste workspace.">
         <NewLeadButton owners={owners} defaultOwnerId={currentUser.id} />
       </PageHeader>
+
+      {/* Teto do Free atingido. A mensagem já existia dentro da action, mas
+          só depois de tentar cadastrar; aqui ela aparece antes, junto com o
+          caminho para assinar — que até então morava só em /settings. */}
+      {!leadLimit.allowed ? (
+        <div className="pb-4">
+          <UpgradePrompt
+            title="Limite de leads do plano Free atingido"
+            description={
+              currentMember?.role === "admin"
+                ? `O Free permite ${leadLimit.limit} leads. Faça upgrade para o Pro para cadastrar sem limite.`
+                : `O Free permite ${leadLimit.limit} leads. Peça a um administrador para fazer upgrade para o Pro.`
+            }
+            canUpgrade={currentMember?.role === "admin"}
+          />
+        </div>
+      ) : null}
 
       <LeadsFilters owners={owners} />
 

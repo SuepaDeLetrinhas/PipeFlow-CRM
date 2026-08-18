@@ -370,13 +370,69 @@ real nunca foi percorrido. Vale testar antes do M15.
       `getWorkspaces`, `getCurrentWorkspace`, `getCurrentMember` e `getMembers`
       já leem do banco; leads, deals e activities continuam em fixtures até
       M11/M12, mas já respeitam o workspace ativo e o caso "sem workspace"
-- [ ] Convite: gera token, grava em `invites`, envia e-mail com Resend
-- [ ] Template do e-mail de convite com a identidade visual
-- [ ] Rota `/invite/[token]`: aceitar convite, com e sem conta prévia
-- [ ] Gestão de membros: alterar papel, remover — restrito a admin no servidor
-- [ ] Autorização por papel checada na Server Action, não só na UI
+- [x] Convite: gera token, grava em `invites`, envia e-mail com Resend
+- [x] Template do e-mail de convite com a identidade visual
+- [x] Rota `/invite/[token]`: aceitar convite, com e sem conta prévia
+- [x] Gestão de membros: alterar papel, remover — restrito a admin no servidor
+- [x] Autorização por papel checada na Server Action, não só na UI
+- [x] Limite de 2 pessoas do plano Free contando convites pendentes, checado
+      no convite e de novo no aceite
 
 **Commit final:** `feat: workspaces, troca de contexto e convites por e-mail`
+
+**A metade da colaboração saiu em `feat/collaboration`.** O M10 foi entregue em
+duas partes: `feat/m10-workspaces` fechou o contexto (criar workspace, cookie,
+switcher) e `feat/collaboration` fechou convites e gestão de membros, sobre a
+tabela `invites` que já existia desde o M8 — sem tabela nova.
+
+**A tabela de convites não é `workspace_invites`.** O M8 já criou `invites`, com
+`token` unique, `expires_at` de 7 dias, o índice parcial `invites_pending_unique`
+e as quatro policies restritas a admin. Criar uma tabela nova duplicaria tudo
+isso; a implementação usa a que existe.
+
+**`/invite/[token]` é o segundo uso legítimo da service-role** (o primeiro será
+o webhook do Stripe). A policy `invites_select_admin` restringe a leitura a
+admins do workspace, e quem clica no link é exatamente quem ainda não é membro —
+abrir o select para `anon` transformaria a tabela num meio de enumerar convites.
+A chave secreta lê por token no servidor; o vínculo só é criado para o usuário
+da sessão, e o e-mail da sessão precisa bater com o do convite, senão o link
+encaminhado por engano viraria acesso.
+
+**Convite inexistente e convite já usado devolvem a mesma tela.** Distinguir os
+dois confirmaria a um estranho com token aleatório que ele acertou um token
+real — mesma razão da mensagem única no login do M9.
+
+**O limite do Free conta convites pendentes, não só membros.** Contando apenas
+membros, um admin convidaria dez pessoas e o limite só apareceria no aceite —
+tarde demais, com gente já convidada recebendo "não há vaga". A conta é
+refeita no aceite porque é ele que de fato ocupa o assento.
+
+**Falha de e-mail não desfaz o convite.** `sendInviteEmail()` devolve
+`delivered: false` em vez de lançar, e a UI mostra o link para o admin repassar.
+Sem isso, "o Resend não está configurado" viraria "não é possível convidar" — e
+o fluxo ficaria intestável até o domínio de envio existir. `RESEND_API_KEY` é
+opcional em `lib/env.ts` pela mesma razão.
+
+**Verificado contra Resend e Supabase reais.** O envio saiu de verdade
+(`delivered` no dashboard do Resend, com o link, o CTA e o accent da marca no
+corpo entregue); o aceite com sessão criou o vínculo em `workspace_members` e
+marcou o convite como `accepted`; a remoção por admin tirou o acesso na hora,
+confirmado sob RLS. Também exercitados: limite do Free em 2/2, membro comum
+recusado por papel, `protect_workspace_owner` barrando rebaixar/remover o dono
+inclusive vindo de outro admin, convite duplicado, "já é membro" e link
+encaminhado para a conta errada.
+
+Três defeitos apareceram só nesse teste, todos corrigidos: revoke/remove/role
+devolviam `ok: true` para id de outro workspace (zero linhas afetadas não é
+erro no PostgREST — os dados estavam protegidos, mas a UI mostraria sucesso
+falso); o preview conferia membership antes do e-mail, escondendo que o link
+era de outra pessoa; e `invalid_type_error` não alcança `invalid_enum_value`
+num `z.enum`, vazando a mensagem do Zod em inglês.
+
+⚠️ **Envio para terceiros ainda não funciona.** O remetente é o sandbox
+`onboarding@resend.dev`, que entrega apenas para o dono da conta Resend —
+convite para outro endereço volta com `emailDelivered: false` e usa o link
+manual. Depende de domínio verificado; está no M15, junto com a URL pública.
 
 **O admin não é criado pela Server Action:** quem insere o vínculo é o trigger
 `handle_new_workspace` do M8. Fazê-lo na action seria impossível — a policy de
@@ -544,20 +600,303 @@ real; apagá-los é decisão para quando o seed tiver outra origem.
 
 ### M14 · Stripe
 
-**Branch:** `feat/m14-stripe`
+**Branch:** `feat/billing` (o plano previa `feat/m14-stripe`)
 
 **Objetivo:** monetização ativa — upgrade, downgrade e limites aplicados.
 
-- [ ] Produtos e preços criados no Stripe (Pro, R$ 49/mês)
-- [ ] Server Action de checkout criando a Checkout Session com `workspace_id` no metadata
-- [ ] `app/api/stripe/webhook/route.ts` com verificação de assinatura e handler idempotente
-- [ ] Eventos tratados: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
-- [ ] Tabela `subscriptions` atualizada pelo webhook usando service-role key (único lugar permitido)
-- [ ] Customer Portal para gerenciar/cancelar assinatura
-- [ ] Limites do Free aplicados no servidor; Pro sem limite
-- [ ] Testado com Stripe CLI (`stripe listen`) e cartões de teste
+- [x] Produtos e preços criados no Stripe (Pro, R$ 50/mês — ver nota sobre o preço)
+- [x] Server Action de checkout criando a Checkout Session com `workspace_id` no metadata
+- [x] `app/api/stripe/webhook/route.ts` com verificação de assinatura e handler idempotente
+- [x] Eventos tratados: `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`
+- [x] Tabela `subscriptions` atualizada pelo webhook usando service-role key (único lugar permitido)
+- [x] Customer Portal para gerenciar/cancelar assinatura
+- [x] Limites do Free aplicados no servidor; Pro sem limite
+- [x] Testado com Stripe CLI (`stripe listen`) e cartões de teste
 
-**Commit final:** `feat: assinaturas via Stripe Checkout, webhook e Customer Portal`
+**Commits.** Saiu em dois, e não no único que o plano previa. A integração com
+o Stripe e a unificação da fonte do plano são mudanças de natureza diferente —
+a segunda corrige uma divergência que já existia, em código que o Stripe não
+toca —, e um commit só esconderia as duas:
+
+1. `feat: checkout do Stripe e webhook de assinaturas`
+2. `refactor: subscriptions como fonte única do plano`
+
+Dois arquivos (`settings/actions.ts` e `settings/page.tsx`) tinham as duas
+mudanças no mesmo diff. Cada um entrou no primeiro commit numa versão
+intermediária — já com `requireAdmin()` extraído e a UI de billing, mas ainda
+lendo `workspace.plan` —, para que o commit compile sozinho. Verificado
+exportando a árvore staged (`git checkout-index`) e rodando `tsc` isolado.
+
+**Fonte única do plano.** Até o M13 o plano era lido de duas colunas
+diferentes: `subscription.plan` na criação de lead e `workspaces.plan` no
+convite e na tela de settings. As duas concordavam só porque nada escrevia em
+`subscriptions` — tudo era Free. Com o webhook gravando, a divergência viraria
+bug de cobrança nos dois sentidos: um assinante Pro seguiria barrado de
+convidar, e um ex-assinante (`plan = 'pro'`, `status = 'canceled'`) continuaria
+criando leads sem limite, porque a leitura crua da coluna ignora o status.
+
+`subscriptions` passou a ser a fonte da verdade, com a regra concentrada em
+`resolvePlan()` (`lib/stripe/plan.ts`) e exposta por `getEffectivePlan()`.
+`workspaces.plan` continua existindo como cache denormalizado, sincronizado
+pelo webhook na mesma escrita. Os três pontos de checagem de limite passaram a
+usar a fonte única; o aceite de convite lê pelo cliente admin, porque quem
+aceita ainda não é membro e a policy recusaria a leitura com a sessão dele.
+
+**`past_due` não rebaixa.** `active`, `trialing` e `past_due` liberam o Pro;
+só `canceled` encerra. Derrubar alguém no primeiro retry falho de cobrança
+apagaria acesso a dados por um cartão que vence amanhã — quem decide o fim é o
+dunning do Stripe, e a tela de billing avisa que o cartão precisa de atenção.
+
+**Preço: R$ 50, não R$ 49.** O `STRIPE_PRICE_ID_PRO` do `.env.local` apontava
+para um **product** (`prod_…`) em vez de um **price** (`price_…`) — o checkout
+teria falhado na primeira tentativa. O preço real cadastrado no Stripe é de
+R$ 50,00/mês, e a UI foi alinhada a ele: o número virou
+`PRO_PLAN_PRICE_BRL` em `lib/constants.ts`, porque estava cravado tanto na
+landing quanto na tela de billing e já havia divergido do Stripe uma vez.
+
+**`current_period_end` mora nos items.** Na API `2026-07-29.dahlia` o campo
+saiu da Subscription e passou para os subscription items, que podem ter ciclos
+diferentes. `periodEnd()` pega o menor. A `apiVersion` fica fixada no cliente
+justamente para essa classe de mudança não chegar por um `npm update`.
+
+**Verificado rodando**, com `stripe listen` encaminhando para o dev server: 15
+eventos entregues, todos 200; assinatura paga promoveu `subscriptions` e
+`workspaces` a `pro` com `current_period_end` correto; a reentrega do mesmo
+evento atualizou a linha existente sem duplicar (mesmo `id`, só `updated_at`
+avançou); o cancelamento rebaixou as duas tabelas para `free`. Os dados de
+teste foram removidos do Stripe e do banco depois.
+
+**O que o M14 deixa em aberto.**
+
+- ~~**Checkout real nunca foi percorrido pelo navegador.**~~ Percorrido em
+  18/08/2026 — ver M14.1 abaixo.
+
+- **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` está no `.env.example` e não é usada
+  por nada.** O Checkout hospedado dispensa Stripe.js no cliente. Mantida por
+  decisão explícita do dono do projeto; segue sem consumidor e fora do schema
+  Zod de `lib/env.ts`, então quem for usar o Payment Element no M15 precisa
+  adicioná-la lá antes.
+
+- ~~**Sem proteção explícita contra replay de eventos antigos.**~~ Fechado na
+  `feat/billing-nextjs` — ver M14.1 abaixo.
+
+- ~~**Banner de upgrade não aparece nas telas de leads e membros.**~~ Fechado na
+  `feat/billing-nextjs` — ver M14.1 abaixo.
+
+---
+
+### M14.1 · Pendências do M14
+
+**Branch:** `feat/billing-nextjs`
+
+Fecha duas das quatro pendências que o M14 deixou. A terceira (checkout pelo
+navegador) segue aberta e continua no M15; a quarta
+(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) foi mantida por decisão explícita.
+
+- [x] Tabela `stripe_events` registrando `event.id` processado
+- [x] Guarda de antiguidade descartando evento fora de ordem
+- [x] `UpgradePrompt` nas telas de leads e de membros
+
+**Idempotência deixou de ser uma propriedade acidental.** Até aqui ela vinha
+inteira do `on conflict (workspace_id)` do upsert: reentregar o mesmo evento
+reescrevia a mesma linha com os mesmos valores. Isso é verdade enquanto *todo*
+handler for idempotente por construção — uma propriedade que ninguém declarava
+e que o próximo handler poderia quebrar sem que nada acusasse. `stripe_events`
+move a garantia para a porta de entrada: o `insert` do `event.id` é a própria
+checagem (a PK faz a segunda tentativa falhar com `23505`), e um evento já
+visto sai antes do switch. O upsert continua lá — as duas garantias são
+independentes de propósito.
+
+**O registro vem antes do handler.** Gravar depois deixaria a janela em que a
+escrita em `subscriptions` já aconteceu mas o evento ainda não consta como
+visto, e o retry reexecutaria o handler. O custo da escolha é o inverso: morrer
+entre o registro e a escrita faz o retry ser descartado e o evento se perder.
+Esse lado é preferível porque os handlers seguem idempotentes por conta
+própria, então reexecutar custa zero e perder custa de verdade. Pelo mesmo
+motivo, falha de infraestrutura no registro **não** bloqueia o evento — recusar
+uma assinatura porque o log de auditoria caiu seria trocar um risco inexistente
+por uma promoção que não acontece.
+
+**Evento fora de ordem.** O Stripe não garante ordem de entrega, e o upsert cru
+não se importa com ela: um `customer.subscription.updated` atrasado chegando
+depois do `.deleted` que veio a seguir reporia `active` por cima de um
+cancelamento já gravado — um workspace cancelado voltaria a Pro sem ninguém
+pagar. A guarda compara `event.created` (relógio do Stripe) com o `updated_at`
+da linha e descarta o mais velho. Empate passa: dois eventos no mesmo segundo
+são o caso comum de uma mudança única, e reprocessar é inofensivo.
+
+**`revoke` explícito, e não ausência de `grant`.** A primeira versão da
+migration só omitia o grant, apostando no `auto_expose_new_tables` do
+`config.toml`. Verificado rodando: sem o `revoke`, uma leitura com a chave anon
+devolve `[]` com 200 em vez de erro — a RLS barra as linhas, mas a tabela
+responde na Data API, porque o projeto cloud ainda auto-expõe entidades novas
+criadas por `postgres`. A escrita já estava barrada nos dois casos (`42501`);
+o revoke tira também a existência da tabela do alcance de quem não tem nada a
+ver com ela.
+
+**O banner respeita quem pode cobrar.** `UpgradePrompt` recebe `canUpgrade` e
+esconde o botão de quem não é admin — `createCheckoutSession()` recusaria a
+chamada via `requireAdmin()`, e oferecer um botão que leva a uma recusa é pior
+do que não oferecer nenhum. Para membro comum o texto aponta o administrador,
+como o aceite de convite já fazia. Na tela de leads a contagem vem de
+`countLeads()`, sem filtros: o limite vale sobre o workspace inteiro, e usar o
+`total` da página mostraria um número menor que o real com qualquer filtro
+ativo.
+
+**`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` fica.** Decisão do usuário. A variável
+segue no `.env.example` e sem nenhum consumidor — o Checkout hospedado dispensa
+Stripe.js no cliente. Ela não está nem no schema Zod de `lib/env.ts`, então
+nada valida a presença dela; quem for usar o Payment Element no M15 precisa
+adicioná-la lá antes.
+
+**Histórico de migrations estava dessincronizado.** `20260817140000` e
+`20260817140100` (M12/M13) estavam aplicadas no banco remoto mas não
+registradas — um `db push --include-all` tentava reaplicá-las e falhava com
+`relation "leads_search_text_idx" already exists`. Reparado com
+`supabase migration repair --status applied` antes de aplicar a deste
+milestone. Não era problema causado aqui, mas bloqueava qualquer push.
+
+**Verificado rodando**, contra o banco remoto: primeiro `insert` do evento
+passa; a reentrega do mesmo `id` falha com `23505` e é detectada como
+duplicada; a leitura com chave anon é recusada com `42501`; a escrita por anon
+é recusada pela RLS; e a tabela fica com exatamente uma linha. A guarda de
+antiguidade foi exercitada nos três casos sobre uma linha real — evento mais
+velho descartado, mais novo aplicado, empate aplicado. Os dados de teste foram
+removidos depois. `tsc`, `next lint` e `next build` limpos.
+
+**Checkout percorrido pelo navegador — fechado.** Era a última pendência do
+M14, aberta desde então porque exigia interação manual com a tela hospedada do
+Stripe. Percorrido em 18/08/2026 às 21:55: clique em "Assinar Pro", cartão
+digitado na tela do Stripe, retorno em `?checkout=success` e o webhook
+promovendo o workspace — `plan = pro`, `status = active`,
+`stripe_subscription_id = sub_1U5uyX…`, `current_period_end` em 18/09/2026. O
+Customer Portal também foi aberto às 22:03
+(`billing_portal.session.created`).
+
+O tráfego real confirmou de passagem o que o M14.1 só tinha exercitado em
+teste: **15 eventos gravados em `stripe_events`**, cada um com id próprio, o
+`checkout.session.completed` entre eles. A idempotência está valendo sobre
+eventos de verdade, não só sobre inserts sintéticos.
+
+---
+
+### M14.2 · Alerta de cobrança recusada
+
+**Branch:** `feat/billing-nextjs`
+
+Quando um pagamento falhava, o app não avisava ninguém. O webhook recebia
+`invoice.payment_failed`, refletia o status e parava por aí; o único sinal era
+um aviso em `/settings`, tela que ninguém abre sem motivo. Como `past_due` não
+rebaixa o plano (decisão do M14, e a certa), o produto ficava silencioso do
+primeiro retry falho até o cancelamento — quando o acesso some sem nenhum aviso
+prévio vindo de nós.
+
+- [x] E-mail aos admins do workspace no `handlePaymentFailed`
+- [x] Tabela `payment_alerts` com guarda de reenvio por fatura
+- [x] `PastDueBanner` em toda a área logada, no slot `banner` do `AppShell`
+
+**A guarda é por fatura, não por evento.** O dunning do Stripe emite
+`invoice.payment_failed` a cada tentativa — a configuração padrão tenta quatro
+vezes ao longo de duas semanas. `stripe_events` não resolve isso: ela deduplica
+reentrega do *mesmo* evento, e cada retry é um evento novo e legítimo, com id
+próprio. O que se repete é a fatura, então a PK de `payment_alerts` é o
+`invoice_id`. Uma fatura nova, no mês seguinte, avisa de novo — que é o
+comportamento desejado.
+
+**A reserva vem antes do envio**, mesmo trade-off de `stripe_events`: o insert
+é a própria checagem (23505 na segunda tentativa), e uma falha de entrega
+depois da reserva não é reenviada. Preferimos não avisar a avisar quatro
+vezes — o banner na UI continua lá, e o Stripe manda o próprio aviso ao titular
+do cartão. Um `select` seguido de `insert` teria uma janela em que dois retries
+simultâneos mandariam dois e-mails.
+
+**O e-mail vai aos admins, não ao titular do cartão.** O Stripe já escreve para
+o e-mail do customer quando a cobrança automática está ligada no painel. Quem
+pode agir do nosso lado é quem administra o workspace, e nem sempre é a mesma
+pessoa que cadastrou o cartão. A leitura dos destinatários usa o cliente admin
+porque não há sessão num webhook — a policy de `workspace_members` recusaria a
+consulta sem `auth.uid()`.
+
+**Envio não-fatal, como o convite.** O estado no banco é o que importa para a
+cobrança; devolver 500 ao Stripe por causa de e-mail faria o evento ser
+reentregue e o sync rodar de novo à toa. O `try/catch` em volta da chamada
+existe para isso.
+
+**O banner ganhou slot próprio no `AppShell`.** Passá-lo dentro de `children`
+o deixaria sob o padding do `<main>`, e o que se quer é uma faixa encostada nas
+bordas logo abaixo da topbar. O `AppShell` é componente cliente, então recebe o
+nó já renderizado no servidor. Para membro comum o banner informa sem oferecer
+"atualizar cartão" — a action do portal recusaria a chamada dele.
+
+**Verificado rodando**, contra o banco remoto: primeira reserva da fatura
+passa; o retry da mesma fatura falha com `23505` e vira `already_sent`; uma
+fatura de id diferente reserva normalmente; a leitura com chave anon é recusada
+com `42501`; e o join que busca os admins resolveu um destinatário real. Dados
+de teste removidos e os três workspaces conferidos de volta em `free/active`
+depois. `tsc`, `next lint` e `next build` limpos.
+
+**Não verificado:** o `PastDueBanner` nunca foi visto renderizado. Ele só
+aparece com `status = past_due`, e a assinatura real nasceu `active` — forçar o
+status no banco exibiria o banner, mas mexeria numa assinatura viva. Falta
+também olhar em conta de membro comum, já que o link "Atualizar cartão" só
+aparece para admin. E não houve envio real pelo Resend: `RESEND_FROM_EMAIL` usa
+domínio não verificado, a mesma pendência que o M15 já registra — em dev o
+envio devolve `not_configured` e segue sem erro, por desenho. `payment_alerts`
+segue vazia, o que é o esperado: nenhuma cobrança falhou.
+
+---
+
+---
+
+### M14.3 · Limites de plano e página de cobrança
+
+**Branch:** `feat/billing-nextjs`
+
+- [x] `lib/limits.ts` com `canAddLead()`, `canAddMember()` e `canAcceptInvite()`
+- [x] Rota `/settings/billing` com plano, medidores de uso e comparação
+- [x] `PlanComparison` compartilhada entre `/settings` e `/settings/billing`
+
+**A regra estava certa e espalhada.** Os limites do Free já eram checados no
+servidor nos três pontos de escrita — criar lead, convidar, aceitar convite —,
+mas remontados à mão em cinco lugares, cada um repetindo "lê o plano, conta,
+compara" e reescrevendo a mensagem de recusa. Cinco cópias de uma regra de
+cobrança são cinco chances de uma divergir, e a que divergisse viraria bug de
+receita. A consolidação tirou 64 linhas a mais do que acrescentou.
+
+**Objeto, não booleano.** Quem chama nunca quer só "pode?": a action precisa da
+mensagem de recusa e a tela precisa do número para o medidor. Com booleano os
+dois contariam de novo — duas queries onde há uma, e a segunda podendo
+discordar da primeira. É união discriminada para `message` ser `string` depois
+de `if (!allowed)`, sem fallback em cinco chamadas.
+
+**`canAcceptInvite()` à parte.** O aceite é o único ponto sem sessão do lado de
+dentro: quem aceita ainda não é membro, a policy `subscriptions_select_member`
+recusaria a leitura e não há workspace no cookie. Conta só membros, sem os
+pendentes — o convite de quem está aceitando é um deles, e somá-lo faria a
+pessoa contar duas vezes, barrando o último assento livre.
+
+**Um bug de cache apareceu no caminho.** O card de plano da sidebar lia
+`activeWorkspace.plan`, o cache denormalizado, e não `getEffectivePlan()`. É a
+mesma divergência que o M14 corrigiu nos outros pontos e que este passou
+batido: com o cache fora de sincronia, um assinante Pro veria "fazer upgrade".
+Passou a receber o plano efetivo do layout.
+
+**A comparação é um componente, não JSX duplicado.** Nasceu inline em
+`/settings/billing` e foi extraída para `PlanComparison` quando passou a
+aparecer também em `/settings`. Duas cópias divergiriam no dia em que um
+recurso entrasse na lista, e a tela desatualizada estaria prometendo errado
+sobre o que o cliente paga. A lista de recursos mora dentro do componente e não
+vem por prop — não há caso em que as duas telas devam comparar coisas
+diferentes.
+
+**Verificado rodando:** a aritmética dos limites conferida contra os três
+workspaces reais, incluindo o caso de 1 membro + 1 convite pendente = 2
+assentos com `canAddMember = false` — assentos comprometidos, não só ocupados.
+As duas rotas compilam e respondem no dev server. `tsc`, `next lint` e
+`next build` limpos.
+
+**Não verificado:** as telas não foram vistas em conta de membro comum, onde os
+botões de cobrança somem e o texto muda para "peça a um administrador".
 
 ---
 
@@ -574,10 +913,38 @@ real; apagá-los é decisão para quando o seed tiver outra origem.
 - [ ] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key exposta ao cliente
 - [ ] Variáveis de ambiente configuradas na Vercel (preview e production)
 - [ ] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando para a URL final
+- [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
+      ver nota abaixo
 - [ ] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
+      — o upgrade aqui precisa ser o checkout percorrido pelo **navegador**, com
+      cartão de teste na tela do Stripe: é o único trecho do M14 que a
+      verificação por API não cobriu
+- [ ] Decidir sobre `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: usar (Payment Element)
+      ou remover do `.env.example` — hoje está documentada e inerte
+- [ ] Levar o botão de upgrade às telas de leads e membros ao bater o teto do
+      Free; hoje o caminho para assinar existe só em `/settings`
 - [ ] README final com setup, variáveis e comandos
 
 **Commit final:** `chore: polimento final e deploy em produção`
+
+**Pendência herdada do M10 — envio de convite para terceiros.** O fluxo de
+convite funciona ponta a ponta, mas hoje o remetente é o sandbox
+`onboarding@resend.dev`, que entrega **apenas** para o e-mail dono da conta
+Resend. Convite para qualquer outro endereço volta com `emailDelivered: false`
+e cai no fluxo do link manual (a tela mostra o link para o admin repassar) —
+verificado rodando.
+
+Destravar exige um domínio próprio verificado em resend.com/domains (SPF +
+DKIM no DNS) e o `RESEND_FROM_EMAIL` apontando para um endereço dele. Cabe
+aqui, e não antes, porque o `NEXT_PUBLIC_SITE_URL` muda no mesmo momento: os
+links dentro do e-mail de convite hoje apontam para `localhost:3000` e só
+passam a valer para outra pessoa quando houver URL pública. Configurar DNS
+antes disso seria fazer o trabalho duas vezes.
+
+`localhost` não pode ser usado como remetente — o provedor do destinatário
+valida SPF/DKIM por DNS público, que não existe para localhost. As duas
+variáveis são independentes: o app pode seguir em localhost enquanto o
+remetente é um domínio real.
 
 ---
 

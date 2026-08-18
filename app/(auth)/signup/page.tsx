@@ -6,7 +6,11 @@ import { SignupForm } from "@/components/auth/signup-form";
 
 export const metadata: Metadata = { title: "Criar conta" };
 
-export default function SignupPage() {
+export default function SignupPage({
+  searchParams,
+}: {
+  searchParams: { next?: string };
+}) {
   return (
     <AuthCard
       title="Criar conta"
@@ -14,13 +18,20 @@ export default function SignupPage() {
       footer={
         <>
           Já tem uma conta?{" "}
-          <Link href="/login" className="font-medium text-primary hover:underline">
+          <Link
+            href={
+              searchParams.next
+                ? `/login?next=${encodeURIComponent(searchParams.next)}`
+                : "/login"
+            }
+            className="font-medium text-primary hover:underline"
+          >
             Entrar
           </Link>
         </>
       }
     >
-      <SignupForm />
+      <SignupForm next={searchParams.next} />
     </AuthCard>
   );
 }

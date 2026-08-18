@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { FREE_PLAN_LIMITS } from "@/lib/constants";
+import { FREE_PLAN_LIMITS, PRO_PLAN_PRICE_BRL } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const plans = [
@@ -23,7 +23,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: formatCurrency(49),
+    price: formatCurrency(PRO_PLAN_PRICE_BRL),
     period: "por mês",
     description: "Para times que já vivem do funil.",
     features: [

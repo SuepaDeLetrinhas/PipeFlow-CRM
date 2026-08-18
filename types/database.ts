@@ -247,6 +247,35 @@ export type Database = {
           },
         ]
       }
+      payment_alerts: {
+        Row: {
+          invoice_id: string
+          recipients: number
+          sent_at: string
+          workspace_id: string
+        }
+        Insert: {
+          invoice_id: string
+          recipients?: number
+          sent_at?: string
+          workspace_id: string
+        }
+        Update: {
+          invoice_id?: string
+          recipients?: number
+          sent_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_alerts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -268,6 +297,27 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+        }
+        Relationships: []
+      }
+      stripe_events: {
+        Row: {
+          event_created_at: string
+          id: string
+          processed_at: string
+          type: string
+        }
+        Insert: {
+          event_created_at: string
+          id: string
+          processed_at?: string
+          type: string
+        }
+        Update: {
+          event_created_at?: string
+          id?: string
+          processed_at?: string
+          type?: string
         }
         Relationships: []
       }

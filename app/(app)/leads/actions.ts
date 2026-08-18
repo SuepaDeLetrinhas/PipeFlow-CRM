@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { toFieldErrors, type ActionResult } from "@/lib/actions/result";
-import { FREE_PLAN_LIMITS } from "@/lib/constants";
-import { countLeads } from "@/lib/data/leads";
-import { getCurrentUser, getCurrentWorkspace, getSubscription } from "@/lib/data/workspaces";
+import { getCurrentUser, getCurrentWorkspace } from "@/lib/data/workspaces";
+import { canAddLead } from "@/lib/limits";
 import { createClient } from "@/lib/supabase/server";
 import {
   activitySchema,
@@ -58,22 +57,17 @@ export async function createLeadAction(input: unknown): Promise<ActionResult> {
 
   if (!workspace) return SEM_WORKSPACE;
 
-  // Limite do plano Free checado NO SERVIDOR antes do insert. A tela do M7
-  // também esconde o botão ao atingir o teto, mas isso é conveniência: quem
-  // chamar a action direto passaria por cima.
-  const subscription = await getSubscription();
-  // Ausência de assinatura é tratada como Free — o mais restritivo.
-  const plan = subscription?.plan ?? "free";
+  // Limite do plano Free checado NO SERVIDOR antes do insert. A tela também
+  // avisa ao atingir o teto, mas isso é conveniência: quem chamar a action
+  // direto passaria por cima.
+  //
+  // A regra mora em `canAddLead()` (`lib/limits.ts`), junto com a do convite e
+  // a das telas — inclusive a leitura do plano por `getEffectivePlan()`, que
+  // ignora `plan = 'pro'` de assinatura cancelada.
+  const limit = await canAddLead();
 
-  if (plan === "free") {
-    const total = await countLeads();
-
-    if (total >= FREE_PLAN_LIMITS.leads) {
-      return {
-        ok: false,
-        message: `O plano Free permite ${FREE_PLAN_LIMITS.leads} leads. Faça upgrade para o Pro para cadastrar mais.`,
-      };
-    }
+  if (!limit.allowed) {
+    return { ok: false, message: limit.message };
   }
 
   const supabase = await createClient();

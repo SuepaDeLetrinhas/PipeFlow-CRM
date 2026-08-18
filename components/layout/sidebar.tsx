@@ -10,11 +10,18 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { PLAN_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import type { Workspace } from "@/types";
+import type { Plan, Workspace } from "@/types";
 
 interface SidebarContentProps {
   workspaces: Workspace[];
   activeWorkspace: Workspace;
+  /**
+   * Plano vindo de `getEffectivePlan()`, e não de `activeWorkspace.plan`.
+   * A coluna do workspace é cache denormalizado mantido pelo webhook; lê-la
+   * aqui faria o card oferecer "fazer upgrade" a um assinante Pro se o cache
+   * saísse de sincronia, e esconder o botão de um ex-assinante cancelado.
+   */
+  plan: Plan;
   collapsed?: boolean;
   onNavigate?: () => void;
 }
@@ -26,6 +33,7 @@ interface SidebarContentProps {
 export function SidebarContent({
   workspaces,
   activeWorkspace,
+  plan,
   collapsed = false,
   onNavigate,
 }: SidebarContentProps) {
@@ -68,16 +76,16 @@ export function SidebarContent({
               Plano atual
             </p>
             <p className="mt-0.5 text-sm font-semibold">
-              {PLAN_LABELS[activeWorkspace.plan]}
+              {PLAN_LABELS[plan]}
             </p>
-            {activeWorkspace.plan === "free" ? (
+            {plan === "free" ? (
               <Button
                 asChild
                 size="sm"
                 className="mt-3 w-full"
                 onClick={onNavigate}
               >
-                <Link href="/settings">
+                <Link href="/settings/billing">
                   <Sparkles className="size-4" />
                   Fazer upgrade
                 </Link>
