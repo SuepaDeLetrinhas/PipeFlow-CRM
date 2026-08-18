@@ -682,18 +682,98 @@ teste foram removidos do Stripe e do banco depois.
   certo é removê-la em vez de deixar uma chave inerte documentada como se
   fosse necessária.
 
-- **Sem proteção explícita contra replay de eventos antigos.** A tolerância
-  padrão do `constructEvent` (5 minutos sobre o timestamp assinado) já barra a
-  reapresentação de um payload capturado, e o `upsert` torna a reentrega
-  inofensiva. O que não existe é registro de `event.id` processado — o que só
-  passaria a importar se algum handler deixasse de ser idempotente, ou se
-  eventos fora de ordem precisassem ser descartados por antiguidade.
+- ~~**Sem proteção explícita contra replay de eventos antigos.**~~ Fechado na
+  `feat/billing-nextjs` — ver M14.1 abaixo.
 
-- **Banner de upgrade não aparece nas telas de leads e membros.** Ao bater o
-  teto do Free, as duas telas mostram a mensagem de limite (M7), mas o caminho
-  para assinar existe só em `/settings`. Levar o `UpgradeButton` até lá é
-  trabalho de UI, e o lugar dele é a revisão de estados vazios e mensagens do
-  M15.
+- ~~**Banner de upgrade não aparece nas telas de leads e membros.**~~ Fechado na
+  `feat/billing-nextjs` — ver M14.1 abaixo.
+
+---
+
+### M14.1 · Pendências do M14
+
+**Branch:** `feat/billing-nextjs`
+
+Fecha duas das quatro pendências que o M14 deixou. A terceira (checkout pelo
+navegador) segue aberta e continua no M15; a quarta
+(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) foi mantida por decisão explícita.
+
+- [x] Tabela `stripe_events` registrando `event.id` processado
+- [x] Guarda de antiguidade descartando evento fora de ordem
+- [x] `UpgradePrompt` nas telas de leads e de membros
+
+**Idempotência deixou de ser uma propriedade acidental.** Até aqui ela vinha
+inteira do `on conflict (workspace_id)` do upsert: reentregar o mesmo evento
+reescrevia a mesma linha com os mesmos valores. Isso é verdade enquanto *todo*
+handler for idempotente por construção — uma propriedade que ninguém declarava
+e que o próximo handler poderia quebrar sem que nada acusasse. `stripe_events`
+move a garantia para a porta de entrada: o `insert` do `event.id` é a própria
+checagem (a PK faz a segunda tentativa falhar com `23505`), e um evento já
+visto sai antes do switch. O upsert continua lá — as duas garantias são
+independentes de propósito.
+
+**O registro vem antes do handler.** Gravar depois deixaria a janela em que a
+escrita em `subscriptions` já aconteceu mas o evento ainda não consta como
+visto, e o retry reexecutaria o handler. O custo da escolha é o inverso: morrer
+entre o registro e a escrita faz o retry ser descartado e o evento se perder.
+Esse lado é preferível porque os handlers seguem idempotentes por conta
+própria, então reexecutar custa zero e perder custa de verdade. Pelo mesmo
+motivo, falha de infraestrutura no registro **não** bloqueia o evento — recusar
+uma assinatura porque o log de auditoria caiu seria trocar um risco inexistente
+por uma promoção que não acontece.
+
+**Evento fora de ordem.** O Stripe não garante ordem de entrega, e o upsert cru
+não se importa com ela: um `customer.subscription.updated` atrasado chegando
+depois do `.deleted` que veio a seguir reporia `active` por cima de um
+cancelamento já gravado — um workspace cancelado voltaria a Pro sem ninguém
+pagar. A guarda compara `event.created` (relógio do Stripe) com o `updated_at`
+da linha e descarta o mais velho. Empate passa: dois eventos no mesmo segundo
+são o caso comum de uma mudança única, e reprocessar é inofensivo.
+
+**`revoke` explícito, e não ausência de `grant`.** A primeira versão da
+migration só omitia o grant, apostando no `auto_expose_new_tables` do
+`config.toml`. Verificado rodando: sem o `revoke`, uma leitura com a chave anon
+devolve `[]` com 200 em vez de erro — a RLS barra as linhas, mas a tabela
+responde na Data API, porque o projeto cloud ainda auto-expõe entidades novas
+criadas por `postgres`. A escrita já estava barrada nos dois casos (`42501`);
+o revoke tira também a existência da tabela do alcance de quem não tem nada a
+ver com ela.
+
+**O banner respeita quem pode cobrar.** `UpgradePrompt` recebe `canUpgrade` e
+esconde o botão de quem não é admin — `createCheckoutSession()` recusaria a
+chamada via `requireAdmin()`, e oferecer um botão que leva a uma recusa é pior
+do que não oferecer nenhum. Para membro comum o texto aponta o administrador,
+como o aceite de convite já fazia. Na tela de leads a contagem vem de
+`countLeads()`, sem filtros: o limite vale sobre o workspace inteiro, e usar o
+`total` da página mostraria um número menor que o real com qualquer filtro
+ativo.
+
+**`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` fica.** Decisão do usuário. A variável
+segue no `.env.example` e sem nenhum consumidor — o Checkout hospedado dispensa
+Stripe.js no cliente. Ela não está nem no schema Zod de `lib/env.ts`, então
+nada valida a presença dela; quem for usar o Payment Element no M15 precisa
+adicioná-la lá antes.
+
+**Histórico de migrations estava dessincronizado.** `20260817140000` e
+`20260817140100` (M12/M13) estavam aplicadas no banco remoto mas não
+registradas — um `db push --include-all` tentava reaplicá-las e falhava com
+`relation "leads_search_text_idx" already exists`. Reparado com
+`supabase migration repair --status applied` antes de aplicar a deste
+milestone. Não era problema causado aqui, mas bloqueava qualquer push.
+
+**Verificado rodando**, contra o banco remoto: primeiro `insert` do evento
+passa; a reentrega do mesmo `id` falha com `23505` e é detectada como
+duplicada; a leitura com chave anon é recusada com `42501`; a escrita por anon
+é recusada pela RLS; e a tabela fica com exatamente uma linha. A guarda de
+antiguidade foi exercitada nos três casos sobre uma linha real — evento mais
+velho descartado, mais novo aplicado, empate aplicado. Os dados de teste foram
+removidos depois. `tsc`, `next lint` e `next build` limpos.
+
+**Aberto:** o checkout pelo navegador continua sem ser percorrido — o trecho
+entre o clique em "Assinar Pro" e o `checkout.session.completed` exige interação
+manual com a tela hospedada do Stripe. A Stripe CLI não estava disponível neste
+ambiente, então os eventos não foram reencaminhados de ponta a ponta como no
+M14. Segue no smoke test do M15.
 
 ---
 

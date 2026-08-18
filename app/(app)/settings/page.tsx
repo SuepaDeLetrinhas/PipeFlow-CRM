@@ -8,6 +8,7 @@ import {
 import { InviteForm } from "@/components/settings/invite-form";
 import { InviteRowActions } from "@/components/settings/invite-row-actions";
 import { MemberRowActions } from "@/components/settings/member-row-actions";
+import { UpgradePrompt } from "@/components/settings/upgrade-prompt";
 import { PageHeader } from "@/components/layout/page-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -174,16 +175,14 @@ export default async function SettingsPage() {
 
             <div className="px-5 pb-5">
               {seatsFull ? (
-                <div className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm">
-                  <p className="font-medium">
-                    Limite do plano Free atingido
-                  </p>
-                  <p className="mt-1 text-muted-foreground">
-                    São {FREE_PLAN_LIMITS.members} pessoas no total, contando
-                    convites pendentes. Revogue um convite ou faça upgrade para o
-                    Pro para convidar mais.
-                  </p>
-                </div>
+                // Este bloco só renderiza dentro de `isAdmin`, então o botão
+                // de upgrade sempre cabe aqui — quem não é admin nem vê a
+                // seção de convites.
+                <UpgradePrompt
+                  title="Limite do plano Free atingido"
+                  description={`São ${FREE_PLAN_LIMITS.members} pessoas no total, contando convites pendentes. Revogue um convite ou faça upgrade para o Pro para convidar mais.`}
+                  canUpgrade
+                />
               ) : (
                 <InviteForm />
               )}

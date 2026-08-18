@@ -9,8 +9,16 @@ import { LeadsPagination } from "@/components/leads/leads-pagination";
 import { LeadsTable } from "@/components/leads/leads-table";
 import { LeadsTableSkeleton } from "@/components/leads/leads-table-skeleton";
 import { NewLeadButton } from "@/components/leads/new-lead-button";
-import { LEAD_STATUS_LABELS } from "@/lib/constants";
-import { getCurrentUser, getLeadsPage, getMembers } from "@/lib/data";
+import { UpgradePrompt } from "@/components/settings/upgrade-prompt";
+import { FREE_PLAN_LIMITS, LEAD_STATUS_LABELS } from "@/lib/constants";
+import {
+  countLeads,
+  getCurrentMember,
+  getCurrentUser,
+  getEffectivePlan,
+  getLeadsPage,
+  getMembers,
+} from "@/lib/data";
 import {
   DEFAULT_LEAD_SORT,
   type LeadFilters,
@@ -139,10 +147,18 @@ async function LeadsResults({
 }
 
 export default async function LeadsPage({ searchParams }: LeadsPageProps) {
-  const [currentUser, members] = await Promise.all([
-    getCurrentUser(),
-    getMembers(),
-  ]);
+  const [currentUser, currentMember, members, plan, leadCount] =
+    await Promise.all([
+      getCurrentUser(),
+      getCurrentMember(),
+      getMembers(),
+      // Plano e contagem total decidem o aviso de teto. A contagem é a de
+      // `countLeads()` — sem filtros —, e não o `total` da página: o limite
+      // vale sobre o workspace inteiro, e um filtro ativo mostraria um número
+      // menor que o real.
+      getEffectivePlan(),
+      countLeads(),
+    ]);
 
   const owners = members.map((member) => member.user);
   const ownerIds = new Set(owners.map((user) => user.id));
@@ -168,6 +184,23 @@ export default async function LeadsPage({ searchParams }: LeadsPageProps) {
       <PageHeader title="Leads" description="Contatos deste workspace.">
         <NewLeadButton owners={owners} defaultOwnerId={currentUser.id} />
       </PageHeader>
+
+      {/* Teto do Free atingido. A mensagem já existia dentro da action, mas
+          só depois de tentar cadastrar; aqui ela aparece antes, junto com o
+          caminho para assinar — que até então morava só em /settings. */}
+      {plan === "free" && leadCount >= FREE_PLAN_LIMITS.leads ? (
+        <div className="pb-4">
+          <UpgradePrompt
+            title="Limite de leads do plano Free atingido"
+            description={
+              currentMember?.role === "admin"
+                ? `O Free permite ${FREE_PLAN_LIMITS.leads} leads. Faça upgrade para o Pro para cadastrar sem limite.`
+                : `O Free permite ${FREE_PLAN_LIMITS.leads} leads. Peça a um administrador para fazer upgrade para o Pro.`
+            }
+            canUpgrade={currentMember?.role === "admin"}
+          />
+        </div>
+      ) : null}
 
       <LeadsFilters owners={owners} />
 
