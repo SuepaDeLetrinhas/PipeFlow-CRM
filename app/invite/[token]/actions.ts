@@ -86,6 +86,17 @@ export async function getInvitePreview(token: string): Promise<InvitePreview> {
   } = await supabase.auth.getUser();
 
   if (user) {
+    // A conferência de e-mail vem ANTES da de membership. Na ordem inversa,
+    // um link encaminhado e aberto por quem já é membro do workspace ganharia
+    // a tela "você já faz parte" — que não é falsa, mas esconde o que de fato
+    // aconteceu: o convite era de outra pessoa. A página passa a dizer o mesmo
+    // que a action responde ao recusar.
+    const sessionEmail = user.email?.trim().toLowerCase() ?? "";
+
+    if (sessionEmail !== invite.email.trim().toLowerCase()) {
+      return { status: "valid", ...base };
+    }
+
     const { data: membership } = await admin
       .from("workspace_members")
       .select("id")

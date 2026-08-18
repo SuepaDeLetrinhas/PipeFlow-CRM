@@ -8,10 +8,16 @@ import { z } from "zod";
  * actions revalidam tudo mesmo quando o formulário já validou.
  */
 
-/** Os dois papéis do modelo de dados. Espelha o enum `role` do Postgres. */
+/**
+ * Os dois papéis do modelo de dados. Espelha o enum `role` do Postgres.
+ *
+ * `errorMap` em vez de `invalid_type_error`: num `z.enum`, um valor fora da
+ * lista é `invalid_enum_value`, não `invalid_type`, e o `invalid_type_error`
+ * não o alcança — a mensagem padrão do Zod ("Expected 'admin' | 'member',
+ * received …") vazaria em inglês para a UI, que é toda em pt-BR.
+ */
 export const roleSchema = z.enum(["admin", "member"], {
-  required_error: "Escolha um papel.",
-  invalid_type_error: "Papel inválido.",
+  errorMap: () => ({ message: "Papel inválido." }),
 });
 
 export const inviteMemberSchema = z.object({

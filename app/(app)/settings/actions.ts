@@ -252,17 +252,30 @@ export async function revokeInviteAction(
 
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // `select()` no delete para saber QUANTAS linhas saíram. Sem ele, um id de
+  // outro workspace (ou já revogado) apagaria zero linhas e mesmo assim
+  // voltaria sem erro — a action responderia "ok" para uma revogação que não
+  // aconteceu, e a UI mostraria um toast de sucesso mentiroso.
+  //
+  // O filtro por `workspace_id` é redundante com a policy `invites_delete_admin`
+  // e mantido de propósito: ele é o que garante que o id de outro workspace não
+  // case, em vez de depender só da RLS.
+  const { data: deleted, error } = await supabase
     .from("invites")
     .delete()
     .eq("id", parsed.data.inviteId)
-    // Redundante com a policy `invites_delete_admin`, e mantido de propósito:
-    // sem o filtro, um id de outro workspace viraria um delete que apaga zero
-    // linhas e reporta sucesso.
-    .eq("workspace_id", auth.context.workspaceId);
+    .eq("workspace_id", auth.context.workspaceId)
+    .select("id");
 
   if (error) {
     return { ok: false, message: "Não foi possível revogar o convite." };
+  }
+
+  if (!deleted?.length) {
+    return {
+      ok: false,
+      message: "Convite não encontrado. Ele pode já ter sido aceito ou revogado.",
+    };
   }
 
   revalidatePath("/settings");
@@ -285,11 +298,15 @@ export async function updateMemberRoleAction(
 
   const supabase = await createClient();
 
-  const { error } = await supabase
+  // `select()` para distinguir "alterou" de "não casou nenhuma linha". Sem ele,
+  // um memberId de outro workspace atualizaria zero linhas e voltaria sem erro,
+  // e a action responderia "ok" a uma alteração que não houve.
+  const { data: updated, error } = await supabase
     .from("workspace_members")
     .update({ role: parsed.data.role })
     .eq("id", parsed.data.memberId)
-    .eq("workspace_id", auth.context.workspaceId);
+    .eq("workspace_id", auth.context.workspaceId)
+    .select("id");
 
   if (error) {
     // O trigger `protect_workspace_owner` levanta exceção ao tentar rebaixar o
@@ -299,6 +316,10 @@ export async function updateMemberRoleAction(
       message:
         "Não foi possível alterar o papel. O dono do workspace não pode ser rebaixado.",
     };
+  }
+
+  if (!updated?.length) {
+    return { ok: false, message: "Membro não encontrado neste workspace." };
   }
 
   revalidatePath("/settings");
@@ -338,11 +359,14 @@ export async function removeMemberAction(
     };
   }
 
-  const { error } = await supabase
+  // `select()` pelo mesmo motivo do update acima: sem ele, um memberId que não
+  // pertence a este workspace apagaria zero linhas e reportaria sucesso.
+  const { data: deleted, error } = await supabase
     .from("workspace_members")
     .delete()
     .eq("id", parsed.data.memberId)
-    .eq("workspace_id", auth.context.workspaceId);
+    .eq("workspace_id", auth.context.workspaceId)
+    .select("id");
 
   if (error) {
     return {
@@ -350,6 +374,10 @@ export async function removeMemberAction(
       message:
         "Não foi possível remover. O dono do workspace não pode ser removido.",
     };
+  }
+
+  if (!deleted?.length) {
+    return { ok: false, message: "Membro não encontrado neste workspace." };
   }
 
   revalidatePath("/settings");
