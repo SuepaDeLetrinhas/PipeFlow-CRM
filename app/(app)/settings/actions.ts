@@ -4,9 +4,10 @@ import { randomBytes } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
 
+import { requireAdmin } from "@/lib/actions/require-admin";
 import { type ActionResult, toFieldErrors } from "@/lib/actions/result";
 import { FREE_PLAN_LIMITS } from "@/lib/constants";
-import { getCurrentUser, getCurrentWorkspace, getSeatUsage } from "@/lib/data";
+import { getSeatUsage } from "@/lib/data";
 import { sendInviteEmail } from "@/lib/email/send-invite";
 import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -21,70 +22,10 @@ import {
  * Server Actions de colaboração: convidar, revogar, mudar papel, remover.
  *
  * Toda action aqui é de admin, e a checagem de papel acontece **no servidor**,
- * antes de qualquer escrita. Esconder o botão na UI é conveniência para quem
- * usa; não é autorização. As policies do Postgres são a terceira camada e
- * recusariam a escrita de qualquer forma, mas confiar só nelas devolveria um
- * erro genérico de RLS em vez de uma frase que explica o que houve.
+ * antes de qualquer escrita, por `requireAdmin()` — extraído para
+ * `lib/actions/require-admin.ts` no M14, quando o checkout passou a precisar
+ * da mesma regra.
  */
-
-interface AdminContext {
-  workspaceId: string;
-  workspaceName: string;
-  userId: string;
-  userName: string;
-}
-
-/**
- * Resolve o contexto e exige papel de admin.
- *
- * Devolve `ActionResult` em caso de recusa (em vez de lançar) para que cada
- * action entregue a mensagem ao formulário pelo mesmo caminho dos erros de
- * validação.
- */
-async function requireAdmin(): Promise<
-  { ok: true; context: AdminContext } | { ok: false; result: ActionResult }
-> {
-  const [user, workspace] = await Promise.all([
-    getCurrentUser(),
-    getCurrentWorkspace(),
-  ]);
-
-  if (!workspace) {
-    return {
-      ok: false,
-      result: { ok: false, message: "Nenhum workspace ativo." },
-    };
-  }
-
-  const supabase = await createClient();
-
-  const { data: membership } = await supabase
-    .from("workspace_members")
-    .select("role")
-    .eq("workspace_id", workspace.id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (membership?.role !== "admin") {
-    return {
-      ok: false,
-      result: {
-        ok: false,
-        message: "Só administradores podem gerenciar a equipe.",
-      },
-    };
-  }
-
-  return {
-    ok: true,
-    context: {
-      workspaceId: workspace.id,
-      workspaceName: workspace.name,
-      userId: user.id,
-      userName: user.full_name,
-    },
-  };
-}
 
 /**
  * Token do convite.
@@ -123,7 +64,7 @@ export async function inviteMemberAction(
     };
   }
 
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("Só administradores podem gerenciar a equipe.");
 
   if (!auth.ok) return auth.result;
 
@@ -246,7 +187,7 @@ export async function revokeInviteAction(
     return { ok: false, message: "Convite inválido." };
   }
 
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("Só administradores podem gerenciar a equipe.");
 
   if (!auth.ok) return auth.result;
 
@@ -292,7 +233,7 @@ export async function updateMemberRoleAction(
     return { ok: false, message: "Dados inválidos." };
   }
 
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("Só administradores podem gerenciar a equipe.");
 
   if (!auth.ok) return auth.result;
 
@@ -336,7 +277,7 @@ export async function removeMemberAction(
     return { ok: false, message: "Membro inválido." };
   }
 
-  const auth = await requireAdmin();
+  const auth = await requireAdmin("Só administradores podem gerenciar a equipe.");
 
   if (!auth.ok) return auth.result;
 

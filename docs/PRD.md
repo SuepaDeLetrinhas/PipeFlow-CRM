@@ -112,6 +112,13 @@ Além dos cards:
 - Webhook para ativar/desativar plano automaticamente
 - Customer Portal do Stripe para gerenciamento de assinatura
 
+> **Divergência aberta (M14).** O preço cadastrado no Stripe é de **R$ 50,00/mês**,
+> não R$ 49. A UI (landing e tela de billing) foi alinhada ao que é de fato
+> cobrado, via `PRO_PLAN_PRICE_BRL` em `lib/constants.ts`. Decidir qual dos dois
+> vale é decisão de produto: se for R$ 49, o preço precisa ser recriado no Stripe
+> (preços são imutáveis — cria-se um novo e arquiva-se o antigo) e a constante
+> acompanha; se for R$ 50, é este documento que se atualiza.
+
 ### 3.7 Landing Page
 
 Página pública de apresentação do PipeFlow CRM, com as seções:

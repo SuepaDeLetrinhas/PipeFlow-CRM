@@ -55,3 +55,13 @@ export const FREE_PLAN_LIMITS = {
   members: 2,
   leads: 50,
 } as const;
+
+/**
+ * Preço mensal do Pro, em BRL, para exibição.
+ *
+ * Constante, e não `49` cravado na landing e na tela de billing: quem cobra de
+ * verdade é o `STRIPE_PRICE_ID_PRO`, e um número solto em dois JSX diferentes
+ * já tinha divergido do preço real do Stripe uma vez. Ao mudar o preço lá,
+ * este é o único lugar a acompanhar.
+ */
+export const PRO_PLAN_PRICE_BRL = 50;

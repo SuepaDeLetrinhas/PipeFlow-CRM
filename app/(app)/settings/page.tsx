@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { CreditCard, Mail, ShieldCheck } from "lucide-react";
 
+import {
+  ManageBillingButton,
+  UpgradeButton,
+} from "@/components/settings/billing-actions";
 import { InviteForm } from "@/components/settings/invite-form";
 import { InviteRowActions } from "@/components/settings/invite-row-actions";
 import { MemberRowActions } from "@/components/settings/member-row-actions";
@@ -15,9 +19,15 @@ import {
   getMembers,
   getPendingInvites,
   getSeatUsage,
+  getSubscription,
 } from "@/lib/data";
-import { FREE_PLAN_LIMITS, PLAN_LABELS, ROLE_LABELS } from "@/lib/constants";
-import { formatDate, initials } from "@/lib/utils";
+import {
+  FREE_PLAN_LIMITS,
+  PLAN_LABELS,
+  PRO_PLAN_PRICE_BRL,
+  ROLE_LABELS,
+} from "@/lib/constants";
+import { formatCurrency, formatDate, initials } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -30,12 +40,14 @@ export const metadata: Metadata = { title: "Configurações" };
  * policy no Postgres.
  */
 export default async function SettingsPage() {
-  const [workspace, currentUser, currentMember, members] = await Promise.all([
-    getCurrentWorkspace(),
-    getCurrentUser(),
-    getCurrentMember(),
-    getMembers(),
-  ]);
+  const [workspace, currentUser, currentMember, members, subscription] =
+    await Promise.all([
+      getCurrentWorkspace(),
+      getCurrentUser(),
+      getCurrentMember(),
+      getMembers(),
+      getSubscription(),
+    ]);
 
   // O layout de `(app)` já mandou para o onboarding quem não tem workspace, mas
   // o tipo é anulável e o TypeScript cobra o tratamento aqui.
@@ -222,27 +234,63 @@ export default async function SettingsPage() {
             Plano
           </h2>
 
-          <div className="mt-3 flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-lg border bg-muted">
-              <CreditCard className="size-4 text-muted-foreground" />
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-lg border bg-muted">
+                <CreditCard className="size-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">
+                  {PLAN_LABELS[workspace.plan]}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {isFree
+                    ? `Até ${FREE_PLAN_LIMITS.members} pessoas e ${FREE_PLAN_LIMITS.leads} leads.`
+                    : "Pessoas e leads ilimitados."}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">
-                {PLAN_LABELS[workspace.plan]}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {isFree
-                  ? `Até ${FREE_PLAN_LIMITS.members} pessoas e ${FREE_PLAN_LIMITS.leads} leads.`
-                  : "Pessoas e leads ilimitados."}
-              </p>
-            </div>
+
+            {/* Só admin cobra — mesma regra que as actions revalidam no
+                servidor. Aqui o botão some; lá a chamada é recusada. */}
+            {isAdmin ? (
+              isFree ? (
+                <UpgradeButton />
+              ) : (
+                <ManageBillingButton />
+              )
+            ) : null}
           </div>
 
-          {/* Assinatura e Customer Portal entram no M14, junto com o Stripe. */}
-          <p className="mt-4 text-xs text-muted-foreground">
-            A troca de plano e o histórico de cobrança entram junto com o
-            checkout.
-          </p>
+          {/* Cobrança falhou e o Stripe ainda está tentando de novo. O acesso
+              segue liberado de propósito (ver `resolvePlan()`): derrubar
+              alguém no primeiro retry falho apagaria acesso por um cartão que
+              vence amanhã. */}
+          {subscription?.status === "past_due" ? (
+            <p className="mt-4 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground">
+              O último pagamento não foi confirmado. Atualize o cartão em
+              «Gerenciar assinatura» para não perder o acesso ao Pro.
+            </p>
+          ) : null}
+
+          {!isFree && subscription?.current_period_end ? (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Renova em {formatDate(subscription.current_period_end)}.
+            </p>
+          ) : null}
+
+          {isFree ? (
+            <p className="mt-4 text-xs text-muted-foreground">
+              O Pro custa {formatCurrency(PRO_PLAN_PRICE_BRL)} por mês, com
+              pessoas e leads ilimitados.
+            </p>
+          ) : null}
+
+          {!isAdmin ? (
+            <p className="mt-4 text-xs text-muted-foreground">
+              Só administradores podem alterar o plano.
+            </p>
+          ) : null}
         </section>
       </div>
     </>
