@@ -84,6 +84,8 @@ export const subscriptions: Subscription[] = [
     status: "active",
     plan: "pro",
     current_period_end: "2026-09-10T13:00:00.000Z",
+    created_at: "2026-06-01T13:00:00.000Z",
+    updated_at: "2026-08-10T13:00:00.000Z",
   },
   {
     id: "c1000000-0000-4000-8000-000000000002",
@@ -93,5 +95,7 @@ export const subscriptions: Subscription[] = [
     status: "active",
     plan: "free",
     current_period_end: null,
+    created_at: "2026-06-01T14:00:00.000Z",
+    updated_at: "2026-06-01T14:00:00.000Z",
   },
 ];

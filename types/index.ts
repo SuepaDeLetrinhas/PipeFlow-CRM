@@ -1,108 +1,68 @@
 /**
  * Tipos de domínio do PipeFlow.
  *
- * Espelham o modelo de dados do CLAUDE.md linha a linha (snake_case,
- * `workspace_id` em toda tabela de domínio, ids em uuid). No M8 estes tipos
- * dão lugar aos gerados em `types/database.ts` — por isso nada aqui usa forma
- * diferente da que o Postgres vai devolver.
+ * A partir do M11 estes tipos **derivam de `types/database.ts`** em vez de
+ * repetir o shape à mão. O PLAN.md previa isso: enquanto as telas liam
+ * fixtures, uma divergência entre os dois arquivos era detalhe invisível;
+ * agora que a leitura vem do Postgres, ela precisa ser erro de compilação.
+ *
+ * `Tables<"leads">` é a linha exata que o PostgREST devolve. Se uma migration
+ * mudar uma coluna, `npm run db:types` regenera e o erro aparece aqui, não em
+ * produção.
  */
 
-export type Role = "admin" | "member";
+import type { Database, Tables } from "./database";
 
-export type Plan = "free" | "pro";
+type Enums = Database["public"]["Enums"];
 
-export type LeadStatus =
-  | "novo"
-  | "contatado"
-  | "qualificado"
-  | "cliente"
-  | "perdido";
+export type Role = Enums["role"];
+
+export type Plan = Enums["plan"];
+
+export type LeadStatus = Enums["lead_status"];
 
 /** Etapas fixas do pipeline, na ordem do PRD. */
-export type DealStage =
-  | "novo_lead"
-  | "contato_realizado"
-  | "proposta_enviada"
-  | "negociacao"
-  | "fechado_ganho"
-  | "fechado_perdido";
+export type DealStage = Enums["deal_stage"];
 
-export type ActivityType = "call" | "email" | "meeting" | "note";
+export type ActivityType = Enums["activity_type"];
 
-export type SubscriptionStatus =
-  | "active"
-  | "trialing"
-  | "past_due"
-  | "canceled";
+export type SubscriptionStatus = Enums["subscription_status"];
 
-export interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  owner_id: string;
-  plan: Plan;
-  created_at: string;
-}
+export type Workspace = Tables<"workspaces">;
 
-export interface User {
-  id: string;
-  full_name: string;
-  email: string;
-  avatar_url: string | null;
-}
+/**
+ * Usuário exibível. Não é `Tables<"profiles">` inteiro: `created_at` do perfil
+ * não interessa a nenhuma tela, e mantê-lo obrigaria todo join a selecioná-lo.
+ */
+export type User = Pick<
+  Tables<"profiles">,
+  "id" | "full_name" | "email" | "avatar_url"
+>;
 
-export interface WorkspaceMember {
-  id: string;
-  workspace_id: string;
-  user_id: string;
-  role: Role;
-  created_at: string;
-  /** Vem de join com o perfil do usuário. */
-  user: User;
-}
+/**
+ * Membro com o perfil embutido. O `user` não existe na tabela — vem do join
+ * com `profiles`, que é o que dá nome e avatar à lista.
+ */
+export type WorkspaceMember = Tables<"workspace_members"> & { user: User };
 
-export interface Lead {
-  id: string;
-  workspace_id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  company: string | null;
-  job_title: string | null;
-  status: LeadStatus;
-  owner_id: string;
-  created_at: string;
-}
+/**
+ * `search_text` e `phone_digits` ficam de fora de propósito.
+ *
+ * As duas são colunas geradas que existem só para o PostgREST poder filtrar
+ * com índice (migration `20260817140000`) — são plumbing de busca, não dado de
+ * domínio. Expô-las obrigaria todo lugar que monta um `Lead` a inventar valor
+ * para colunas que o banco calcula sozinho, e daria à UI dois campos
+ * redundantes que ninguém deve exibir.
+ */
+export type Lead = Omit<Tables<"leads">, "search_text" | "phone_digits">;
 
-export interface Deal {
-  id: string;
-  workspace_id: string;
-  title: string;
-  value: number;
-  stage: DealStage;
-  position: number;
-  due_date: string | null;
-  lead_id: string | null;
-  owner_id: string;
-  created_at: string;
-}
+/**
+ * `value` chega como `number` na tipagem gerada, mas a coluna é
+ * `numeric(12,2)` e o PostgREST serializa numeric como **string** no JSON.
+ * A conversão acontece em `lib/data/deals.ts`, num ponto só.
+ */
+export type Deal = Tables<"deals">;
 
-export interface Activity {
-  id: string;
-  workspace_id: string;
-  lead_id: string;
-  type: ActivityType;
-  description: string;
-  author_id: string;
-  occurred_at: string;
-}
+export type Activity = Tables<"activities">;
 
-export interface Subscription {
-  id: string;
-  workspace_id: string;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  status: SubscriptionStatus;
-  plan: Plan;
-  current_period_end: string | null;
-}
+export type Subscription = Tables<"subscriptions">;

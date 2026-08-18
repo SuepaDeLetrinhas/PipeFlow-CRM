@@ -74,7 +74,13 @@ export function ActivityTimeline({
           <ol className="space-y-3">
             {dayActivities.map((activity) => {
               const Icon = TYPE_ICONS[activity.type];
-              const author = authors.get(activity.author_id);
+              // `author_id` é nulo quando quem escreveu saiu da equipe: a
+              // coluna é `on delete set null` justamente para a atividade
+              // permanecer na timeline sem a autoria. O bloco "por Fulano"
+              // abaixo já trata a ausência.
+              const author = activity.author_id
+                ? authors.get(activity.author_id)
+                : undefined;
 
               return (
                 <li

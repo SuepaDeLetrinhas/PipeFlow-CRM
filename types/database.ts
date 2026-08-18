@@ -194,6 +194,8 @@ export type Database = {
           name: string
           owner_id: string
           phone: string | null
+          phone_digits: string | null
+          search_text: string | null
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string
           workspace_id: string
@@ -207,6 +209,8 @@ export type Database = {
           name: string
           owner_id: string
           phone?: string | null
+          phone_digits?: string | null
+          search_text?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
           workspace_id: string
@@ -220,6 +224,8 @@ export type Database = {
           name?: string
           owner_id?: string
           phone?: string | null
+          phone_digits?: string | null
+          search_text?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
           workspace_id?: string
@@ -388,6 +394,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      dashboard_funnel: {
+        Args: { target_workspace_id: string }
+        Returns: {
+          count: number
+          stage: Database["public"]["Enums"]["deal_stage"]
+          value: number
+        }[]
+      }
+      dashboard_metrics: {
+        Args: { target_workspace_id: string }
+        Returns: {
+          closed_deals: number
+          open_deals: number
+          pipeline_value: number
+          total_leads: number
+          won_deals: number
+        }[]
+      }
       is_workspace_admin: {
         Args: { target_workspace_id: string }
         Returns: boolean
@@ -395,6 +419,21 @@ export type Database = {
       is_workspace_member: {
         Args: { target_workspace_id: string }
         Returns: boolean
+      }
+      move_deal: {
+        Args: {
+          deal_id: string
+          target_position: number
+          target_stage: Database["public"]["Enums"]["deal_stage"]
+        }
+        Returns: undefined
+      }
+      next_deal_position: {
+        Args: {
+          target_stage: Database["public"]["Enums"]["deal_stage"]
+          target_workspace_id: string
+        }
+        Returns: number
       }
       pipeflow_normalize: { Args: { value: string }; Returns: string }
       shares_workspace_with: {
