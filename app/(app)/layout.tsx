@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import {
   getCurrentUser,
   getCurrentWorkspace,
+  getEffectivePlan,
   getWorkspaces,
 } from "@/lib/data";
 
@@ -15,10 +16,14 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, workspaces, activeWorkspace] = await Promise.all([
+  const [user, workspaces, activeWorkspace, plan] = await Promise.all([
     getCurrentUser(),
     getWorkspaces(),
     getCurrentWorkspace(),
+    // Fonte da verdade, de `subscriptions` — o card da sidebar lia
+    // `workspace.plan`, o cache denormalizado, e divergia de todo o resto do
+    // app quando o webhook e a coluna saíam de sincronia.
+    getEffectivePlan(),
   ]);
 
   // Conta sem workspace nenhum: acabou de se cadastrar e ainda não passou pelo
@@ -36,6 +41,7 @@ export default async function AppLayout({
       user={user}
       workspaces={workspaces}
       activeWorkspace={activeWorkspace}
+      plan={plan}
       defaultCollapsed={collapsed}
       /* Cobrança recusada é a única coisa que interrompe qualquer tela: o
          `past_due` não rebaixa o plano, então sem isto o app fica silencioso

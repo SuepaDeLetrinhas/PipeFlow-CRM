@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import { CreditCard, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, CreditCard, Mail, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
-import {
-  ManageBillingButton,
-  UpgradeButton,
-} from "@/components/settings/billing-actions";
 import { InviteForm } from "@/components/settings/invite-form";
 import { InviteRowActions } from "@/components/settings/invite-row-actions";
 import { MemberRowActions } from "@/components/settings/member-row-actions";
+import { UsageMeter } from "@/components/settings/usage-meter";
 import { UpgradePrompt } from "@/components/settings/upgrade-prompt";
 import { PageHeader } from "@/components/layout/page-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -23,13 +21,8 @@ import {
   getSeatUsage,
   getSubscription,
 } from "@/lib/data";
-import {
-  FREE_PLAN_LIMITS,
-  PLAN_LABELS,
-  PRO_PLAN_PRICE_BRL,
-  ROLE_LABELS,
-} from "@/lib/constants";
-import { formatCurrency, formatDate, initials } from "@/lib/utils";
+import { FREE_PLAN_LIMITS, PLAN_LABELS, ROLE_LABELS } from "@/lib/constants";
+import { formatDate, initials } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Configurações" };
 
@@ -95,7 +88,13 @@ export default async function SettingsPage() {
             </div>
 
             {isFree && usage ? (
-              <SeatMeter used={usage.total} limit={FREE_PLAN_LIMITS.members} />
+              <div className="w-full sm:w-56">
+                <UsageMeter
+                  label="Assentos"
+                  used={usage.total}
+                  limit={FREE_PLAN_LIMITS.members}
+                />
+              </div>
             ) : null}
           </header>
 
@@ -234,6 +233,9 @@ export default async function SettingsPage() {
         ) : null}
 
         {/* --- Plano ------------------------------------------------------- */}
+        {/* Resumo, não a tela inteira: plano, uso e comparação moram em
+            /settings/billing. Aqui fica só o suficiente para saber onde se
+            está e como chegar lá. */}
         <section className="rounded-xl border bg-card p-5">
           <h2 className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
             Plano
@@ -254,15 +256,13 @@ export default async function SettingsPage() {
               </div>
             </div>
 
-            {/* Só admin cobra — mesma regra que as actions revalidam no
-                servidor. Aqui o botão some; lá a chamada é recusada. */}
-            {isAdmin ? (
-              isFree ? (
-                <UpgradeButton />
-              ) : (
-                <ManageBillingButton />
-              )
-            ) : null}
+            <Link
+              href="/settings/billing"
+              className="inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
+            >
+              {isFree ? "Ver planos" : "Gerenciar cobrança"}
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
 
           {/* Cobrança falhou e o Stripe ainda está tentando de novo. O acesso
@@ -272,49 +272,11 @@ export default async function SettingsPage() {
           {subscription?.status === "past_due" ? (
             <p className="mt-4 rounded-lg border border-warning/40 bg-warning/5 p-3 text-xs text-foreground">
               O último pagamento não foi confirmado. Atualize o cartão em
-              «Gerenciar assinatura» para não perder o acesso ao Pro.
-            </p>
-          ) : null}
-
-          {!isFree && subscription?.current_period_end ? (
-            <p className="mt-4 text-xs text-muted-foreground">
-              Renova em {formatDate(subscription.current_period_end)}.
-            </p>
-          ) : null}
-
-          {isFree ? (
-            <p className="mt-4 text-xs text-muted-foreground">
-              O Pro custa {formatCurrency(PRO_PLAN_PRICE_BRL)} por mês, com
-              pessoas e leads ilimitados.
-            </p>
-          ) : null}
-
-          {!isAdmin ? (
-            <p className="mt-4 text-xs text-muted-foreground">
-              Só administradores podem alterar o plano.
+              Cobrança para não perder o acesso ao Pro.
             </p>
           ) : null}
         </section>
       </div>
     </>
-  );
-}
-
-/** Barra de assentos consumidos — membros + convites pendentes. */
-function SeatMeter({ used, limit }: { used: number; limit: number }) {
-  const ratio = Math.min(used / limit, 1);
-
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-        <div
-          className={ratio >= 1 ? "h-full bg-warning" : "h-full bg-primary"}
-          style={{ width: `${ratio * 100}%` }}
-        />
-      </div>
-      <span className="font-mono text-xs tabular-nums text-muted-foreground">
-        {used}/{limit}
-      </span>
-    </div>
   );
 }

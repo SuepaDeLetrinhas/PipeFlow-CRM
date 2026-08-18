@@ -47,7 +47,7 @@ export async function PastDueBanner() {
             que ele não consegue executar. */}
         {isAdmin ? (
           <Link
-            href="/settings"
+            href="/settings/billing"
             className="font-medium underline underline-offset-4 hover:text-warning"
           >
             Atualizar cartão

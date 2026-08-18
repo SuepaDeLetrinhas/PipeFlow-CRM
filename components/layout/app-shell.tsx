@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sheet";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { User, Workspace } from "@/types";
+import type { Plan, User, Workspace } from "@/types";
 
 /** Cookie que guarda o estado da sidebar entre visitas. */
 export const SIDEBAR_COOKIE = "pipeflow_sidebar";
@@ -21,6 +21,8 @@ interface AppShellProps {
   user: User;
   workspaces: Workspace[];
   activeWorkspace: Workspace;
+  /** Plano efetivo, de `getEffectivePlan()`. Repassado ao card da sidebar. */
+  plan: Plan;
   defaultCollapsed?: boolean;
   /**
    * Faixa de largura total entre a topbar e o conteúdo — hoje o aviso de
@@ -38,6 +40,7 @@ export function AppShell({
   user,
   workspaces,
   activeWorkspace,
+  plan,
   defaultCollapsed = false,
   banner,
   children,
@@ -67,6 +70,7 @@ export function AppShell({
           <SidebarContent
             workspaces={workspaces}
             activeWorkspace={activeWorkspace}
+            plan={plan}
             collapsed={collapsed}
           />
         </aside>
@@ -80,6 +84,7 @@ export function AppShell({
             <SidebarContent
               workspaces={workspaces}
               activeWorkspace={activeWorkspace}
+              plan={plan}
               onNavigate={() => setMobileNavOpen(false)}
             />
           </SheetContent>
