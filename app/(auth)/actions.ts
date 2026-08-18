@@ -76,7 +76,10 @@ export async function signInAction(
   redirect(safeNext(next));
 }
 
-export async function signUpAction(input: unknown): Promise<ActionResult> {
+export async function signUpAction(
+  input: unknown,
+  next?: string,
+): Promise<ActionResult> {
   const parsed = signUpSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -95,7 +98,12 @@ export async function signUpAction(input: unknown): Promise<ActionResult> {
       // `handle_new_user` lê `full_name` daqui para preencher o perfil. Sem
       // isso o nome nasceria vazio e a sidebar mostraria só o e-mail.
       data: { full_name: parsed.data.fullName },
-      emailRedirectTo: `${env.NEXT_PUBLIC_SITE_URL}/callback`,
+      // O `next` viaja no callback para que quem se cadastra a partir de um
+      // convite volte ao convite depois de confirmar o e-mail, em vez de cair
+      // no dashboard sem ter aceitado nada.
+      emailRedirectTo: `${env.NEXT_PUBLIC_SITE_URL}/callback${
+        next ? `?next=${encodeURIComponent(safeNext(next))}` : ""
+      }`,
     },
   });
 
@@ -126,7 +134,7 @@ export async function signUpAction(input: unknown): Promise<ActionResult> {
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(safeNext(next));
 }
 
 export async function forgotPasswordAction(

@@ -1,16 +1,39 @@
 import type { Metadata } from "next";
-import { Settings } from "lucide-react";
+import { CreditCard, Mail, ShieldCheck } from "lucide-react";
 
-import { EmptyState } from "@/components/layout/empty-state";
+import { InviteForm } from "@/components/settings/invite-form";
+import { InviteRowActions } from "@/components/settings/invite-row-actions";
+import { MemberRowActions } from "@/components/settings/member-row-actions";
 import { PageHeader } from "@/components/layout/page-header";
-import { getCurrentWorkspace, getMembers } from "@/lib/data";
-import { PLAN_LABELS } from "@/lib/constants";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  getCurrentMember,
+  getCurrentUser,
+  getCurrentWorkspace,
+  getMembers,
+  getPendingInvites,
+  getSeatUsage,
+} from "@/lib/data";
+import { FREE_PLAN_LIMITS, PLAN_LABELS, ROLE_LABELS } from "@/lib/constants";
+import { formatDate, initials } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Configurações" };
 
+/**
+ * Configurações do workspace: equipe, convites e plano.
+ *
+ * Server Component. O papel de quem está vendo decide o que aparece — mas
+ * apenas isso: toda ação daqui revalida o papel no servidor antes de escrever.
+ * Um membro que forjasse a chamada receberia a recusa da action, e depois a da
+ * policy no Postgres.
+ */
 export default async function SettingsPage() {
-  const [workspace, members] = await Promise.all([
+  const [workspace, currentUser, currentMember, members] = await Promise.all([
     getCurrentWorkspace(),
+    getCurrentUser(),
+    getCurrentMember(),
     getMembers(),
   ]);
 
@@ -18,18 +41,229 @@ export default async function SettingsPage() {
   // o tipo é anulável e o TypeScript cobra o tratamento aqui.
   if (!workspace) return null;
 
+  const isAdmin = currentMember?.role === "admin";
+
+  // Convites e uso de assentos só interessam a admin — e `getPendingInvites()`
+  // devolveria lista vazia para os demais de qualquer forma, barrado pela
+  // policy. Não buscar poupa duas queries por render de membro comum.
+  const [invites, usage] = isAdmin
+    ? await Promise.all([getPendingInvites(), getSeatUsage()])
+    : [[], null];
+
+  const isFree = workspace.plan === "free";
+  const seatsFull = isFree && (usage?.total ?? 0) >= FREE_PLAN_LIMITS.members;
+
   return (
     <>
       <PageHeader
         title="Configurações"
-        description={`${workspace.name} · plano ${PLAN_LABELS[workspace.plan]} · ${members.length} membros`}
+        description={`${workspace.name} · plano ${PLAN_LABELS[workspace.plan]}`}
       />
 
-      <EmptyState
-        icon={Settings}
-        title="Workspace, membros e billing entram mais adiante"
-        description="Esta rota existe para a navegação ficar completa. As abas com convite de colaboradores e assinatura vêm depois."
-      />
+      <div className="space-y-8">
+        {/* --- Equipe ------------------------------------------------------ */}
+        <section className="rounded-xl border bg-card">
+          <header className="flex flex-col gap-1 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                Equipe
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {members.length}{" "}
+                {members.length === 1 ? "pessoa" : "pessoas"} neste workspace
+                {isFree ? ` · limite de ${FREE_PLAN_LIMITS.members} no Free` : null}
+              </p>
+            </div>
+
+            {isFree && usage ? (
+              <SeatMeter used={usage.total} limit={FREE_PLAN_LIMITS.members} />
+            ) : null}
+          </header>
+
+          <Separator />
+
+          <ul className="divide-y">
+            {members.map((member) => {
+              const isOwner = member.user_id === workspace.owner_id;
+              const isSelf = member.user_id === currentUser.id;
+
+              return (
+                <li
+                  key={member.id}
+                  className="flex items-center gap-3 px-5 py-3.5"
+                >
+                  <Avatar className="size-9">
+                    <AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">
+                      {initials(member.user.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {member.user.full_name}
+                      {isSelf ? (
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          (você)
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {member.user.email}
+                    </p>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-2">
+                    {isOwner ? (
+                      <Badge variant="outline" className="gap-1">
+                        <ShieldCheck className="size-3" />
+                        Dono
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant={member.role === "admin" ? "secondary" : "outline"}
+                      >
+                        {ROLE_LABELS[member.role]}
+                      </Badge>
+                    )}
+
+                    {isAdmin ? (
+                      <MemberRowActions
+                        memberId={member.id}
+                        memberName={member.user.full_name}
+                        role={member.role}
+                        isOwner={isOwner}
+                        isSelf={isSelf}
+                      />
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* --- Convites ---------------------------------------------------- */}
+        {isAdmin ? (
+          <section className="rounded-xl border bg-card">
+            <header className="p-5">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                Convidar
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A pessoa recebe um link por e-mail, válido por 7 dias.
+              </p>
+            </header>
+
+            <div className="px-5 pb-5">
+              {seatsFull ? (
+                <div className="rounded-lg border border-warning/40 bg-warning/5 p-4 text-sm">
+                  <p className="font-medium">
+                    Limite do plano Free atingido
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    São {FREE_PLAN_LIMITS.members} pessoas no total, contando
+                    convites pendentes. Revogue um convite ou faça upgrade para o
+                    Pro para convidar mais.
+                  </p>
+                </div>
+              ) : (
+                <InviteForm />
+              )}
+            </div>
+
+            {invites.length > 0 ? (
+              <>
+                <Separator />
+                <div className="px-5 pt-4">
+                  <h3 className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                    Pendentes
+                  </h3>
+                </div>
+                <ul className="divide-y">
+                  {invites.map((invite) => (
+                    <li
+                      key={invite.id}
+                      className="flex items-center gap-3 px-5 py-3.5"
+                    >
+                      <div className="flex size-9 items-center justify-center rounded-full border bg-muted">
+                        <Mail className="size-4 text-muted-foreground" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {invite.email}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          Convidado por {invite.invited_by_name} · expira em{" "}
+                          {formatDate(invite.expires_at)}
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge variant="outline">
+                          {ROLE_LABELS[invite.role]}
+                        </Badge>
+                        <InviteRowActions
+                          inviteId={invite.id}
+                          email={invite.email}
+                        />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* --- Plano ------------------------------------------------------- */}
+        <section className="rounded-xl border bg-card p-5">
+          <h2 className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+            Plano
+          </h2>
+
+          <div className="mt-3 flex items-center gap-3">
+            <div className="flex size-9 items-center justify-center rounded-lg border bg-muted">
+              <CreditCard className="size-4 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">
+                {PLAN_LABELS[workspace.plan]}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {isFree
+                  ? `Até ${FREE_PLAN_LIMITS.members} pessoas e ${FREE_PLAN_LIMITS.leads} leads.`
+                  : "Pessoas e leads ilimitados."}
+              </p>
+            </div>
+          </div>
+
+          {/* Assinatura e Customer Portal entram no M14, junto com o Stripe. */}
+          <p className="mt-4 text-xs text-muted-foreground">
+            A troca de plano e o histórico de cobrança entram junto com o
+            checkout.
+          </p>
+        </section>
+      </div>
     </>
+  );
+}
+
+/** Barra de assentos consumidos — membros + convites pendentes. */
+function SeatMeter({ used, limit }: { used: number; limit: number }) {
+  const ratio = Math.min(used / limit, 1);
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
+        <div
+          className={ratio >= 1 ? "h-full bg-warning" : "h-full bg-primary"}
+          style={{ width: `${ratio * 100}%` }}
+        />
+      </div>
+      <span className="font-mono text-xs tabular-nums text-muted-foreground">
+        {used}/{limit}
+      </span>
+    </div>
   );
 }

@@ -66,3 +66,17 @@ export type Deal = Tables<"deals">;
 export type Activity = Tables<"activities">;
 
 export type Subscription = Tables<"subscriptions">;
+
+export type InviteStatus = Enums["invite_status"];
+
+/**
+ * Convite pendente com o nome de quem convidou.
+ *
+ * `token` fica **fora** de propósito: ele é a credencial de aceite, e a lista
+ * de membros é um Server Component que serializa o que devolve para o cliente.
+ * Quem precisa do link é a action que acabou de criar o convite, que o tem em
+ * mãos sem passar por aqui.
+ */
+export type Invite = Omit<Tables<"invites">, "token"> & {
+  invited_by_name: string;
+};

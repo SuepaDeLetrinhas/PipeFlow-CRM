@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { signUpSchema, type SignUpInput } from "@/lib/validations/auth";
 
-export function SignupForm() {
+export function SignupForm({ next }: { next?: string }) {
   const [pending, startTransition] = React.useTransition();
   const [formError, setFormError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
@@ -36,7 +36,7 @@ export function SignupForm() {
     setSuccess(null);
 
     startTransition(async () => {
-      const result = await signUpAction(values);
+      const result = await signUpAction(values, next);
 
       // Em caso de sucesso COM sessão a action redireciona e nada aqui roda.
       // Chega-se a este ponto com `ok: true` apenas quando a confirmação de

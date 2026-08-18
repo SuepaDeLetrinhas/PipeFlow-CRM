@@ -370,13 +370,55 @@ real nunca foi percorrido. Vale testar antes do M15.
       `getWorkspaces`, `getCurrentWorkspace`, `getCurrentMember` e `getMembers`
       já leem do banco; leads, deals e activities continuam em fixtures até
       M11/M12, mas já respeitam o workspace ativo e o caso "sem workspace"
-- [ ] Convite: gera token, grava em `invites`, envia e-mail com Resend
-- [ ] Template do e-mail de convite com a identidade visual
-- [ ] Rota `/invite/[token]`: aceitar convite, com e sem conta prévia
-- [ ] Gestão de membros: alterar papel, remover — restrito a admin no servidor
-- [ ] Autorização por papel checada na Server Action, não só na UI
+- [x] Convite: gera token, grava em `invites`, envia e-mail com Resend
+- [x] Template do e-mail de convite com a identidade visual
+- [x] Rota `/invite/[token]`: aceitar convite, com e sem conta prévia
+- [x] Gestão de membros: alterar papel, remover — restrito a admin no servidor
+- [x] Autorização por papel checada na Server Action, não só na UI
+- [x] Limite de 2 pessoas do plano Free contando convites pendentes, checado
+      no convite e de novo no aceite
 
 **Commit final:** `feat: workspaces, troca de contexto e convites por e-mail`
+
+**A metade da colaboração saiu em `feat/collaboration`.** O M10 foi entregue em
+duas partes: `feat/m10-workspaces` fechou o contexto (criar workspace, cookie,
+switcher) e `feat/collaboration` fechou convites e gestão de membros, sobre a
+tabela `invites` que já existia desde o M8 — sem tabela nova.
+
+**A tabela de convites não é `workspace_invites`.** O M8 já criou `invites`, com
+`token` unique, `expires_at` de 7 dias, o índice parcial `invites_pending_unique`
+e as quatro policies restritas a admin. Criar uma tabela nova duplicaria tudo
+isso; a implementação usa a que existe.
+
+**`/invite/[token]` é o segundo uso legítimo da service-role** (o primeiro será
+o webhook do Stripe). A policy `invites_select_admin` restringe a leitura a
+admins do workspace, e quem clica no link é exatamente quem ainda não é membro —
+abrir o select para `anon` transformaria a tabela num meio de enumerar convites.
+A chave secreta lê por token no servidor; o vínculo só é criado para o usuário
+da sessão, e o e-mail da sessão precisa bater com o do convite, senão o link
+encaminhado por engano viraria acesso.
+
+**Convite inexistente e convite já usado devolvem a mesma tela.** Distinguir os
+dois confirmaria a um estranho com token aleatório que ele acertou um token
+real — mesma razão da mensagem única no login do M9.
+
+**O limite do Free conta convites pendentes, não só membros.** Contando apenas
+membros, um admin convidaria dez pessoas e o limite só apareceria no aceite —
+tarde demais, com gente já convidada recebendo "não há vaga". A conta é
+refeita no aceite porque é ele que de fato ocupa o assento.
+
+**Falha de e-mail não desfaz o convite.** `sendInviteEmail()` devolve
+`delivered: false` em vez de lançar, e a UI mostra o link para o admin repassar.
+Sem isso, "o Resend não está configurado" viraria "não é possível convidar" — e
+o fluxo ficaria intestável até o domínio de envio existir. `RESEND_API_KEY` é
+opcional em `lib/env.ts` pela mesma razão.
+
+⚠️ **Não exercitado de ponta a ponta:** o **envio real do e-mail** depende de
+`RESEND_API_KEY` e de um domínio verificado no Resend, que ainda não existem —
+o caminho `not_configured` (link copiável) é o que roda hoje. Os quatro estados
+da rota de aceite (válido, expirado, já usado, sem sessão) foram verificados
+contra o banco real; o **aceite com sessão** depende de logar com o e-mail
+convidado e não foi percorrido.
 
 **O admin não é criado pela Server Action:** quem insere o vínculo é o trigger
 `handle_new_workspace` do M8. Fazê-lo na action seria impossível — a policy de

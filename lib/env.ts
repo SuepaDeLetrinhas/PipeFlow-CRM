@@ -21,6 +21,19 @@ const serverSchema = z.object({
   SUPABASE_JWKS_URL: z.string().url(),
 });
 
+/**
+ * Envio de e-mail. Separado do `serverSchema` porque é **opcional**: sem chave
+ * do Resend o convite continua sendo gravado e o admin copia o link à mão.
+ *
+ * Fosse obrigatório aqui, `serverEnv()` passaria a derrubar toda rota que usa
+ * a service-role em qualquer ambiente sem Resend configurado — inclusive o
+ * aceite de convite, que não manda e-mail nenhum.
+ */
+const emailSchema = z.object({
+  RESEND_API_KEY: z.string().min(1),
+  RESEND_FROM_EMAIL: z.string().min(1),
+});
+
 function parse<T extends z.ZodTypeAny>(schema: T, input: unknown): z.infer<T> {
   const result = schema.safeParse(input);
 
@@ -59,4 +72,25 @@ export function serverEnv() {
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
     SUPABASE_JWKS_URL: process.env.SUPABASE_JWKS_URL,
   });
+}
+
+/**
+ * Config do Resend, ou `null` quando não houver.
+ *
+ * Devolver `null` em vez de lançar é o que mantém o convite utilizável antes
+ * de o domínio de envio existir: `sendInviteEmail()` vira no-op e a UI mostra
+ * o link para copiar. Um throw aqui transformaria "e-mail não configurado" em
+ * "convite não pode ser criado", que são problemas de gravidade diferente.
+ */
+export function emailEnv() {
+  if (typeof window !== "undefined") {
+    throw new Error("emailEnv() não pode ser chamado no cliente.");
+  }
+
+  const result = emailSchema.safeParse({
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+  });
+
+  return result.success ? result.data : null;
 }
