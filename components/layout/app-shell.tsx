@@ -22,6 +22,15 @@ interface AppShellProps {
   workspaces: Workspace[];
   activeWorkspace: Workspace;
   defaultCollapsed?: boolean;
+  /**
+   * Faixa de largura total entre a topbar e o conteúdo — hoje o aviso de
+   * cobrança recusada. Slot próprio, e não parte de `children`, porque precisa
+   * escapar do padding do `<main>` para encostar nas bordas.
+   *
+   * Vem como `ReactNode` já renderizado no servidor: este componente é
+   * cliente, e um Server Component não pode ser importado aqui.
+   */
+  banner?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -30,6 +39,7 @@ export function AppShell({
   workspaces,
   activeWorkspace,
   defaultCollapsed = false,
+  banner,
   children,
 }: AppShellProps) {
   // O valor inicial vem do cookie lido no servidor, então a sidebar já nasce
@@ -82,6 +92,7 @@ export function AppShell({
             onToggleCollapsed={toggleCollapsed}
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
+          {banner}
           <main className="flex-1 px-4 py-6 md:px-6 lg:px-8">{children}</main>
         </div>
       </div>

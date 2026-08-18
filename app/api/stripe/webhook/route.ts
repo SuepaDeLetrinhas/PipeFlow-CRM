@@ -1,6 +1,7 @@
 import type Stripe from "stripe";
 
-import { stripeEnv } from "@/lib/env";
+import { sendPaymentFailedEmail } from "@/lib/email/send-payment-failed";
+import { env, stripeEnv } from "@/lib/env";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Plan, SubscriptionStatus } from "@/types";
@@ -205,8 +206,12 @@ async function handleCheckoutCompleted(
  *
  * Não rebaixa ninguém: quem decide isso é o Stripe, que move a assinatura para
  * `past_due` e depois `canceled` conforme as regras de dunning da conta. Aqui
- * só refletimos o estado atual da assinatura, para a tela de billing poder
- * avisar que o cartão precisa de atenção.
+ * refletimos o estado atual da assinatura — para a tela de billing avisar que
+ * o cartão precisa de atenção — e avisamos os admins por e-mail.
+ *
+ * O e-mail vai **depois** do sync e fora da transação lógica dele: o estado no
+ * banco é o que importa para a cobrança, e uma falha de entrega não pode fazer
+ * o evento voltar como não processado.
  */
 async function handlePaymentFailed(
   invoice: Stripe.Invoice,
@@ -222,8 +227,42 @@ async function handlePaymentFailed(
   if (!line) return;
 
   const id = typeof line === "string" ? line : line.id;
+  const subscription = await stripe.subscriptions.retrieve(id);
 
-  await syncSubscription(await stripe.subscriptions.retrieve(id), event);
+  await syncSubscription(subscription, event);
+
+  const workspaceId = subscription.metadata?.workspace_id;
+
+  if (!workspaceId) return;
+
+  // Envio isolado do resto do handler. Um erro inesperado aqui (rede, Resend
+  // fora) não pode virar 500: o Stripe reentregaria o evento, o sync rodaria
+  // de novo e o admin receberia o aviso duplicado por uma falha que não tem
+  // nada a ver com o estado da assinatura.
+  try {
+    const result = await sendPaymentFailedEmail(workspaceId, invoice.id, {
+      amountDue: invoice.amount_due,
+      // `next_payment_attempt` é null na última tentativa do dunning — e o
+      // template muda o texto por causa disso, de "vamos tentar de novo" para
+      // "essa era a última".
+      nextAttemptAt: invoice.next_payment_attempt
+        ? new Date(invoice.next_payment_attempt * 1000)
+        : null,
+      billingUrl: `${env.NEXT_PUBLIC_SITE_URL}/settings`,
+    });
+
+    if (!result.delivered) {
+      console.warn("[billing] aviso de cobrança não entregue", {
+        workspaceId,
+        reason: result.reason,
+      });
+    }
+  } catch (error) {
+    console.error("[billing] erro inesperado ao avisar sobre a cobrança", {
+      workspaceId,
+      error,
+    });
+  }
 }
 
 /**

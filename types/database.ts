@@ -247,6 +247,35 @@ export type Database = {
           },
         ]
       }
+      payment_alerts: {
+        Row: {
+          invoice_id: string
+          recipients: number
+          sent_at: string
+          workspace_id: string
+        }
+        Insert: {
+          invoice_id: string
+          recipients?: number
+          sent_at?: string
+          workspace_id: string
+        }
+        Update: {
+          invoice_id?: string
+          recipients?: number
+          sent_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_alerts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

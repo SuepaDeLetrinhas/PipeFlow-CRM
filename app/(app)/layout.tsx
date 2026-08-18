@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AppShell, SIDEBAR_COOKIE } from "@/components/layout/app-shell";
+import { PastDueBanner } from "@/components/settings/past-due-banner";
 import { Toaster } from "@/components/ui/sonner";
 import {
   getCurrentUser,
@@ -36,6 +37,11 @@ export default async function AppLayout({
       workspaces={workspaces}
       activeWorkspace={activeWorkspace}
       defaultCollapsed={collapsed}
+      /* Cobrança recusada é a única coisa que interrompe qualquer tela: o
+         `past_due` não rebaixa o plano, então sem isto o app fica silencioso
+         até o Stripe cancelar. Vai no slot `banner`, e não em `children`, para
+         ficar em largura total sob a topbar. Renderiza `null` no caso normal. */
+      banner={<PastDueBanner />}
     >
       {children}
       {/* Só na área autenticada: as telas públicas não disparam toasts. */}

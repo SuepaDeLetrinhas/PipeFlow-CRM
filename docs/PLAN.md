@@ -769,11 +769,78 @@ antiguidade foi exercitada nos três casos sobre uma linha real — evento mais
 velho descartado, mais novo aplicado, empate aplicado. Os dados de teste foram
 removidos depois. `tsc`, `next lint` e `next build` limpos.
 
-**Aberto:** o checkout pelo navegador continua sem ser percorrido — o trecho
-entre o clique em "Assinar Pro" e o `checkout.session.completed` exige interação
-manual com a tela hospedada do Stripe. A Stripe CLI não estava disponível neste
-ambiente, então os eventos não foram reencaminhados de ponta a ponta como no
-M14. Segue no smoke test do M15.
+**Aberto no M14.1:** o checkout pelo navegador continua sem ser percorrido — o
+trecho entre o clique em "Assinar Pro" e o `checkout.session.completed` exige
+interação manual com a tela hospedada do Stripe. A Stripe CLI foi instalada
+depois (`winget install --id Stripe.StripeCli`), mas o fluxo ainda não foi
+exercitado de ponta a ponta. Segue no smoke test do M15.
+
+---
+
+### M14.2 · Alerta de cobrança recusada
+
+**Branch:** `feat/billing-nextjs`
+
+Quando um pagamento falhava, o app não avisava ninguém. O webhook recebia
+`invoice.payment_failed`, refletia o status e parava por aí; o único sinal era
+um aviso em `/settings`, tela que ninguém abre sem motivo. Como `past_due` não
+rebaixa o plano (decisão do M14, e a certa), o produto ficava silencioso do
+primeiro retry falho até o cancelamento — quando o acesso some sem nenhum aviso
+prévio vindo de nós.
+
+- [x] E-mail aos admins do workspace no `handlePaymentFailed`
+- [x] Tabela `payment_alerts` com guarda de reenvio por fatura
+- [x] `PastDueBanner` em toda a área logada, no slot `banner` do `AppShell`
+
+**A guarda é por fatura, não por evento.** O dunning do Stripe emite
+`invoice.payment_failed` a cada tentativa — a configuração padrão tenta quatro
+vezes ao longo de duas semanas. `stripe_events` não resolve isso: ela deduplica
+reentrega do *mesmo* evento, e cada retry é um evento novo e legítimo, com id
+próprio. O que se repete é a fatura, então a PK de `payment_alerts` é o
+`invoice_id`. Uma fatura nova, no mês seguinte, avisa de novo — que é o
+comportamento desejado.
+
+**A reserva vem antes do envio**, mesmo trade-off de `stripe_events`: o insert
+é a própria checagem (23505 na segunda tentativa), e uma falha de entrega
+depois da reserva não é reenviada. Preferimos não avisar a avisar quatro
+vezes — o banner na UI continua lá, e o Stripe manda o próprio aviso ao titular
+do cartão. Um `select` seguido de `insert` teria uma janela em que dois retries
+simultâneos mandariam dois e-mails.
+
+**O e-mail vai aos admins, não ao titular do cartão.** O Stripe já escreve para
+o e-mail do customer quando a cobrança automática está ligada no painel. Quem
+pode agir do nosso lado é quem administra o workspace, e nem sempre é a mesma
+pessoa que cadastrou o cartão. A leitura dos destinatários usa o cliente admin
+porque não há sessão num webhook — a policy de `workspace_members` recusaria a
+consulta sem `auth.uid()`.
+
+**Envio não-fatal, como o convite.** O estado no banco é o que importa para a
+cobrança; devolver 500 ao Stripe por causa de e-mail faria o evento ser
+reentregue e o sync rodar de novo à toa. O `try/catch` em volta da chamada
+existe para isso.
+
+**O banner ganhou slot próprio no `AppShell`.** Passá-lo dentro de `children`
+o deixaria sob o padding do `<main>`, e o que se quer é uma faixa encostada nas
+bordas logo abaixo da topbar. O `AppShell` é componente cliente, então recebe o
+nó já renderizado no servidor. Para membro comum o banner informa sem oferecer
+"atualizar cartão" — a action do portal recusaria a chamada dele.
+
+**Verificado rodando**, contra o banco remoto: primeira reserva da fatura
+passa; o retry da mesma fatura falha com `23505` e vira `already_sent`; uma
+fatura de id diferente reserva normalmente; a leitura com chave anon é recusada
+com `42501`; e o join que busca os admins resolveu um destinatário real. Dados
+de teste removidos e os três workspaces conferidos de volta em `free/active`
+depois. `tsc`, `next lint` e `next build` limpos.
+
+**Não verificado:** o banner não foi visto renderizado no navegador. Ele exige
+sessão autenticada e o middleware redireciona `/dashboard` para `/login` sem
+ela — forcei `past_due` no banco, mas não consigo logar como usuário para
+carregar a tela. Falta olhar em duas contas (admin e membro comum), já que o
+link "Atualizar cartão" só aparece para admin. Também não houve envio real pelo
+Resend: `RESEND_FROM_EMAIL` usa domínio não verificado, a mesma pendência que o
+M15 já registra.
+
+---
 
 ---
 
