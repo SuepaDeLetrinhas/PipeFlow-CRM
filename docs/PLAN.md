@@ -966,7 +966,21 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
       escalada de acesso no aceite de convite (e-mail conferido por string, sem
       `email_confirmed_at`, com `enable_confirmations = false` no Auth) e a
       ausência de headers de segurança. O que sobrou dela virou o M16
-- [ ] Variáveis de ambiente configuradas na Vercel (preview e production)
+- [x] Variáveis de ambiente configuradas na Vercel (preview e production) — as
+      11 em Production e Preview. **Duas estavam erradas e foram corrigidas em
+      19/08/2026:**
+
+      `NEXT_PUBLIC_SITE_URL` estava `http://localhost:3000` **em produção**.
+      Não era suposição: o valor é `NEXT_PUBLIC_`, então fica embutido no
+      bundle, e aparecia na `og:url` do HTML servido. Como `metadataBase` sai
+      da mesma variável, todo Open Graph apontava para a máquina de quem
+      abrisse. Pior que a prévia feia: os 8 consumidores incluem o
+      `emailRedirectTo` da confirmação de cadastro, o link de redefinição de
+      senha e as três URLs de retorno do Stripe — todos mandariam a pessoa
+      para `localhost`. Agora aponta para `https://pipe-flow-crm-delta.vercel.app`.
+
+      `STRIPE_WEBHOOK_SECRET` na Vercel ainda era o valor antigo; o novo tinha
+      sido trocado só no `.env.local`, que produção não lê. Sincronizado.
 - [~] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando
       para a URL final — **a metade do banco está fechada.** As 8 migrations
       constam aplicadas e registradas no remoto (`migration list` sem lacuna,
@@ -1071,6 +1085,21 @@ item pode ser fechado sem a URL pública existir:
 3. **Domínio verificado no Resend** e `RESEND_FROM_EMAIL` apontando para ele —
    a pendência herdada do M10. Enquanto for o sandbox, convite para terceiro
    cai no link manual.
+
+   **Adiado por decisão explícita, em 19/08/2026.** O domínio comprado
+   (`airabbit.app`) só é liberado no mês seguinte, e sem controle do DNS não há
+   como criar os registros SPF/DKIM que o Resend exige — é requisito do
+   protocolo de e-mail, não do fornecedor: trocar de provedor não contorna, e
+   `vercel.app` não serve porque a zona não é nossa. O domínio chegou a ser
+   adicionado no Resend e ficou em `not_started`, com os 3 registros pendentes.
+
+   O projeto segue sem isso porque o convite **continua funcionando** pelo link
+   manual: o admin cria, a tela mostra a URL e ele repassa. Todas as regras
+   valem igual — token de 32 bytes, expiração de 7 dias, limite do plano e
+   e-mail confirmado. É exatamente o caso que o M10 previu ao fazer
+   `sendInviteEmail()` devolver `delivered: false` em vez de lançar, para que
+   "Resend não configurado" nunca virasse "não é possível convidar". O que se
+   perde é o envio automático para terceiros, não o fluxo.
 4. **Smoke test pelo navegador** na URL pública: cadastro → workspace → lead →
    negócio → upgrade.
 
