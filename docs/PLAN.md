@@ -1004,10 +1004,34 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
       convite, e-mail de cobrança recusada e `lib/limits.ts`), todos no servidor
 - [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
       ver nota abaixo
-- [ ] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
+- [~] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
       — o upgrade aqui precisa ser o checkout percorrido pelo **navegador**, com
       cartão de teste na tela do Stripe: é o único trecho do M14 que a
       verificação por API não cobriu
+
+      **O deploy está no ar** em `https://pipe-flow-crm-delta.vercel.app`, e o
+      que dá para exercitar sem sessão foi exercitado (19/08/2026):
+
+      - As 4 rotas autenticadas em 307 para `/login?next=…`, preservando o
+        destino; as públicas em 200
+      - Os **4 headers de segurança** presentes na resposta real, e o 404
+        customizado em português. Antes deste deploy eram **0 de 4** — a
+        `feat/deploy` nunca tinha sido pushada, e produção rodava `1c80c4a`,
+        anterior ao `bffa516`. Ou seja: os headers **e a correção da escalada
+        no aceite de convite** estavam fora do ar sem ninguém notar
+      - Webhook recusando assinatura forjada com 400 e GET com 405
+      - **Fluxo de "esqueci a senha" testado de verdade**: o disparo gerou
+        `recovery_sent_at` e token no `auth.users` 13s após a chamada — prova
+        que o 200 da API sozinho não dá, já que ela responde 200 até para
+        e-mail inexistente. O `/callback` com code inválido devolve mensagem em
+        português, e as duas tentativas de open redirect (`https://evil.com` e
+        `//evil.com`) terminam no próprio domínio: o `safeNext()` do M9 vale em
+        produção
+
+      **Falta o que exige sessão e cartão**: cadastro → workspace → lead →
+      negócio → upgrade pelo navegador. E a entrega SMTP do e-mail de
+      recuperação não foi confirmada — o alvo do teste foi um domínio fictício
+      de propósito, para não disparar e-mail a terceiro.
 - [ ] Decidir sobre `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: usar (Payment Element)
       ou remover do `.env.example` — hoje está documentada e inerte
 - [ ] Levar o botão de upgrade às telas de leads e membros ao bater o teto do
