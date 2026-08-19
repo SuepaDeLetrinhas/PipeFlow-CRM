@@ -1046,6 +1046,28 @@ item pode ser fechado sem a URL pública existir:
 2. **Chaves do Stripe em modo live** e o `STRIPE_WEBHOOK_SECRET` **novo**: o
    atual veio do `stripe listen` e vale só para o túnel local. O endpoint de
    produção gera outro, e o webhook recusa com 400 até ele ser trocado.
+
+   **Os valores exatos do endpoint, para não serem redigitados de memória:**
+
+   | Campo | Valor |
+   | --- | --- |
+   | URL | `https://<domínio>/api/stripe/webhook` |
+   | Eventos | `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed` |
+
+   O path é `/api/stripe/webhook` — **`stripe` antes, `webhook` no singular**.
+   A ordem invertida ou o plural (`/api/webhooks/stripe`) devolve 404 em todo
+   evento, e o modo de falha é o mesmo do secret errado: o checkout completa, o
+   cliente paga, e só a entrega falha. O caminho vem da estrutura de pastas do
+   App Router (`app/api/stripe/webhook/route.ts`) e não é configurável por
+   variável — mudá-lo exige mover o arquivo.
+
+   **São quatro eventos, não três.** `customer.subscription.updated` é o que
+   carrega renovação, troca de plano e a volta de `past_due` para `active`
+   depois que o cartão é regularizado — ele divide o handler com `.deleted`
+   (`syncSubscription`). Sem ele assinado, um workspace que falha a cobrança e
+   depois se recupera fica preso no `PastDueBanner`, e o `current_period_end`
+   nunca avança na renovação. É a assinatura que segue viva com o app achando
+   que não.
 3. **Domínio verificado no Resend** e `RESEND_FROM_EMAIL` apontando para ele —
    a pendência herdada do M10. Enquanto for o sandbox, convite para terceiro
    cai no link manual.
