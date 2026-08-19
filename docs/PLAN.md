@@ -910,7 +910,11 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
 - [ ] `error.tsx`, `not-found.tsx` e `loading.tsx` nas rotas principais
 - [ ] Acessibilidade: foco visível, navegação por teclado no Kanban, labels e contraste
 - [ ] Revisão responsiva completa em mobile
-- [ ] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key exposta ao cliente
+- [x] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key
+      exposta ao cliente — feita na branch `feat/deploy`. Achou e corrigiu uma
+      escalada de acesso no aceite de convite (e-mail conferido por string, sem
+      `email_confirmed_at`, com `enable_confirmations = false` no Auth) e a
+      ausência de headers de segurança. O que sobrou dela virou o M16
 - [ ] Variáveis de ambiente configuradas na Vercel (preview e production)
 - [ ] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando para a URL final
 - [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
@@ -948,13 +952,67 @@ remetente é um domínio real.
 
 ---
 
+### M16 · Next 16 e React 19
+
+**Branch:** `chore/next-16`
+
+**Objetivo:** sair do `next@14.2.35`, que é o fim da linha 14.x e acumula
+advisories sem correção dentro do major.
+
+Aberto pela auditoria do `feat/deploy`. **Depois do M15, não dentro dele**: a
+auditoria entregou uma correção de escalada de acesso, e empilhar um major do
+framework na mesma janela de deploy tornaria indiagnosticável qual dos dois
+quebrou, se algo quebrar. Separar é o que mantém cada mudança rastreável.
+
+- [ ] `npx @next/codemod@canary upgrade latest` — cobre a maior parte do mecânico
+- [ ] `cookies()` vira async em **6 call-sites**: `app/(app)/layout.tsx:37`,
+      `app/(app)/workspaces/actions.ts:115` e `:150`,
+      `app/invite/[token]/actions.ts:243`, `lib/data/workspaces.ts:58`,
+      `lib/supabase/server.ts:21`
+- [ ] `params` / `searchParams` viram Promise em **5 páginas**: `leads`,
+      `leads/[id]`, `login`, `signup`, `invite/[token]`
+- [ ] Resolver `next-themes` — ver nota abaixo
+- [ ] Subir `@types/react` / `@types/react-dom` para `^19` e `eslint-config-next`
+      para a versão par do Next
+- [ ] Reteste dirigido: troca de workspace, aceite de convite e toggle de tema
+      (os três caminhos que tocam cookie), mais o webhook do Stripe
+- [ ] `npm audit --omit=dev` limpo ao final
+
+**Commit final:** `chore: next 16 e react 19`
+
+**O bloqueio real é o React 19, não o Next.** O Next 16 o exige, e
+`next-themes@0.3` declara peer `^16.8 || ^17 || ^18` — sem 19. Ou sobe a
+biblioteca (se houver versão compatível na época), ou troca por outra, ou
+instala com `--legacy-peer-deps` aceitando que o peer está mentindo. As demais
+já declaram 19: `recharts`, `sonner`, `react-hook-form` e `@dnd-kit` foram
+conferidos. O toggle de tema é requisito do brand guide, então "remover" não é
+saída.
+
+**Metade da migração de `cookies()` já foi paga.** `lib/supabase/server.ts` é
+`async` desde o M8 exatamente por isso — a nota lá em cima já dizia "chamar com
+`await` desde já evita ter de tocar em toda call-site no upgrade". Os 6
+call-sites acima são o resto.
+
+**Urgência real: baixa.** Os 11 advisories do `next@14.2.35` foram revisados
+contra este código na auditoria — os de maior severidade exigem i18n no Pages
+Router, custom server ou rewrites com host dinâmico, e nenhum existe aqui.
+Sobram cache poisoning de RSC e exposição de Server Functions, reais mas de
+impacto bem menor que o furo de convite já corrigido. É dívida técnica
+agendada, não incidente.
+
+---
+
 ## Ordem de dependências
 
 ```
 M0 → M1 → M2 → M3 → M4 ─┐
-                M3 → M5 ─┼→ M8 → M9 → M10 → M11 → M12 → M13 → M14 → M15
+                M3 → M5 ─┼→ M8 → M9 → M10 → M11 → M12 → M13 → M14 → M15 → M16
                 M3 → M6 ─┤
                 M3 → M7 ─┘
 ```
 
 M4, M5, M6 e M7 dependem só do M3 e podem ser feitos em paralelo. Toda a Fase 2 é sequencial: M8 é pré-requisito de tudo, e M10 (workspace ativo) precisa existir antes de M11–M13, que dependem do escopo por workspace.
+
+O M16 é o único milestone que não entrega produto: é manutenção de dependência,
+aberta pela auditoria de segurança do `feat/deploy`. Fica depois do M15 de
+propósito — ver a justificativa na seção dele.
