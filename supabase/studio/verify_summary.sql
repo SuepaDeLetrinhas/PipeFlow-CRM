@@ -29,12 +29,32 @@ rls as (
 
 -- 2. Toda tabela com RLS tem policy. RLS sem policy nega tudo em silencio:
 -- a tela fica vazia sem erro, que e o sintoma mais dificil de diagnosticar.
+--
+-- Excecao: as tabelas de infraestrutura do webhook (`stripe_events`,
+-- `payment_alerts`) sao deny-all de proposito — RLS ligada, policy nenhuma e
+-- `revoke all` de anon/authenticated. Nenhuma tela le essas linhas; quem
+-- escreve e le e a service-role, que ignora RLS. Para elas o veredito se
+-- inverte: policy nenhuma e o esperado, e o que precisa ser conferido e se o
+-- revoke esta mesmo valendo — sem ele o projeto cloud auto-expoe a tabela na
+-- Data API e a leitura por anon devolve `[]` com 200 em vez de erro.
 policies as (
   select
     2 as ordem,
     'Tem policies' as checagem,
     c.relname as alvo,
     case
+      when c.relname in ('stripe_events', 'payment_alerts') then
+        case
+          when count(p.polname) > 0
+            then 'FALHA — tabela deny-all ganhou ' || count(p.polname) || ' policy(s)'
+          when exists (
+            select 1 from information_schema.role_table_grants as g
+            where g.table_schema = 'public'
+              and g.table_name = c.relname
+              and g.grantee in ('anon', 'authenticated')
+          ) then 'FALHA — deny-all mas com grant para anon/authenticated'
+          else 'ok — deny-all por desenho (so service-role)'
+        end
       when count(p.polname) = 0 then 'FALHA — RLS ligada e nenhuma policy'
       else 'ok — ' || count(p.polname) || ' policies'
     end as veredito
