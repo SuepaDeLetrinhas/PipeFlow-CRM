@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertCircle, ArrowRight, Clock, UserCheck } from "lucide-react";
+import { AlertCircle, ArrowRight, Clock, MailWarning, UserCheck } from "lucide-react";
 
 import { AcceptInviteButton } from "@/components/settings/accept-invite-button";
 import { Button } from "@/components/ui/button";
@@ -110,6 +110,20 @@ function InviteBody({
             </Link>
           </Button>
         }
+      />
+    );
+  }
+
+  // Sessão com o e-mail do convite, mas ainda não confirmado. A action recusa
+  // o aceite nesse estado (ver o comentário lá): a conferência de e-mail sozinha
+  // é só comparação de string, e sem a confirmação qualquer pessoa que saiba o
+  // endereço convidado se cadastraria com ele para entrar no workspace.
+  if (preview.status === "email_unconfirmed") {
+    return (
+      <Message
+        icon={MailWarning}
+        title="Confirme seu e-mail"
+        description={`Enviamos um link de confirmação para ${preview.email ?? "o seu e-mail"}. Confirme o endereço e volte a este convite para entrar no ${preview.workspaceName ?? "workspace"}.`}
       />
     );
   }
