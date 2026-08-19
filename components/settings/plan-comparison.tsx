@@ -42,20 +42,27 @@ export function PlanComparison({
 
       <Separator />
 
-      {/* Tabela em overflow próprio: em telas estreitas ela rola sozinha em vez
-          de esticar a página inteira. */}
+      {/*
+        Overflow próprio como rede de segurança, mas a tabela cabe sozinha.
+
+        Com `min-w-[420px]` num card de 341px (viewport de 375px), 79px ficavam
+        escondidos atrás de rolagem lateral sem nenhuma pista — e o que sumia
+        era justamente a coluna "Pro", a que decide o upgrade. O mínimo cai
+        para 0 e o aperto vai para o padding das células, que encolhe abaixo de
+        `sm`. Verificado em 375px: 341px de tabela em 341px úteis.
+      */}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[420px] text-sm">
+        <table className="w-full text-sm [&_td]:px-2 [&_td]:py-3 [&_th]:px-2 [&_th]:py-3 sm:[&_td]:px-4 sm:[&_td]:py-4 sm:[&_th]:px-4 sm:[&_th]:py-4">
           <thead>
             <tr className="border-b">
-              <th className="p-4 text-left font-medium text-muted-foreground">
+              <th className="text-left font-medium text-muted-foreground">
                 Recurso
               </th>
-              <th className="p-4 text-left font-medium">
+              <th className="text-left font-medium">
                 Free
                 {isFree ? <CurrentTag /> : null}
               </th>
-              <th className="p-4 text-left font-medium">
+              <th className="text-left font-medium">
                 Pro
                 {!isFree ? <CurrentTag /> : null}
               </th>
@@ -121,11 +128,11 @@ function ComparisonRow({
 }) {
   return (
     <tr className="border-b last:border-0">
-      <td className="p-4 text-muted-foreground">{feature}</td>
-      <td className="p-4">
+      <td className="text-muted-foreground">{feature}</td>
+      <td>
         <ComparisonCell value={free} />
       </td>
-      <td className="p-4">
+      <td>
         <ComparisonCell value={pro} />
       </td>
     </tr>

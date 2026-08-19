@@ -906,19 +906,132 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
 
 **Objetivo:** aplicação em produção, estável e acessível.
 
-- [ ] Revisão de todos os empty states, loadings e mensagens de erro
-- [ ] `error.tsx`, `not-found.tsx` e `loading.tsx` nas rotas principais
+- [ ] Revisão de todos os empty states, loadings e mensagens de erro —
+      **parcial.** Cobertura conferida tela a tela: falta `loading.tsx` só em
+      `/settings/billing`, que foi adicionado (cinco queries em paralelo numa
+      tela de cobrança — ficar em branco dá a impressão de que o plano sumiu).
+      A lista de convites pendentes segue sem empty state de propósito: some
+      inteira quando vazia, logo abaixo do formulário que cria convites, e uma
+      caixa "nenhum convite" ali seria ruído. Falta reler as mensagens de erro
+      das Server Actions uma a uma
+- [x] `error.tsx`, `not-found.tsx` e `loading.tsx` nas rotas principais — feito
+      na branch `feat/deploy`. `app/(app)/error.tsx` cobre a área autenticada
+      inteira, para o shell continuar de pé quando uma tela falha;
+      `app/not-found.tsx` responde à URL sem rota, fora dos grupos, porque quem
+      chega a um link quebrado não está necessariamente logado; `loading.tsx`
+      em `dashboard`, `pipeline` e `settings`. **Não** em `leads/`: de lá o
+      boundary envolveria `leads/[id]` e o `notFound()` responderia 200 — a
+      razão já estava escrita em `leads-table-skeleton.tsx` e continua valendo
 - [ ] Acessibilidade: foco visível, navegação por teclado no Kanban, labels e contraste
-- [ ] Revisão responsiva completa em mobile
-- [ ] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key exposta ao cliente
-- [ ] Variáveis de ambiente configuradas na Vercel (preview e production)
-- [ ] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando para a URL final
+      — **parcial.** Corrigido o que escondia controle no toque: a alça de
+      arraste e o menu "⋯" do card eram `opacity-0` revelado por hover, então
+      num telefone o único caminho não-arrasto para mover um card era invisível.
+      Agora o `opacity-0` vale só sob `@media (hover: hover)`. A alça também
+      subiu de 16×16 para 24×24 (mínimo do WCAG 2.2 para alvo de toque, medido
+      em 375px) — o ícone segue com 16px, o que cresceu foi a área de acerto.
+      Falta a varredura de contraste e o teste com leitor de tela
+- [x] Revisão responsiva completa em mobile — feita na branch `feat/deploy`,
+      **renderizando as telas** em 375 / 768 / 1440px com Playwright, não só
+      lendo CSS. Resultado final: zero overflow horizontal em todas as telas
+      nas três larguras.
+
+      Primeira leva (por inspeção de código): a tabela de "Prazos próximos"
+      tinha células `whitespace-nowrap` sem container de rolagem e empurrava a
+      página inteira para o scroll horizontal; o `YAxis` do funil era fixo em
+      132px e comia metade da largura num viewport de 360px, reduzindo as
+      barras a tocos; e a topbar carregava um campo de busca desabilitado desde
+      antes de a busca existir — virou link para `/leads`.
+
+      Segunda leva, que **só apareceu com a tela renderizada**:
+
+      - "Prazos próximos" continuava cortada mesmo com a rolagem: 467px de
+        tabela em 293px úteis, 37% escondido sem nenhuma pista visual. Rolagem
+        lateral não é descoberta pelo leitor. Agora as colunas de menor
+        prioridade somem por breakpoint (padrão de `leads-table`) e o valor
+        reaparece embaixo do nome — 293px em 293px, sem corte
+      - A tabela Free × Pro tinha `min-w-[420px]` num card de 341px: 79px
+        escondidos, e o que sumia era a coluna "Pro", a que decide o upgrade.
+        O mínimo saiu e o padding das células encolhe abaixo de `sm`
+      - **A sidebar entrava em largura total já em `md` (768px)** — um terço da
+        tela do tablet, sobrando menos de duas colunas do Kanban. Entre `md` e
+        `lg` ela agora é trilho de ícones fixo (72px), e o botão de recolher
+        some porque não há o que alternar. É estado derivado do viewport, não
+        preferência: não escreve cookie, e acima de `lg` a escolha da pessoa
+        volta a valer
+
+      Não verificado em aparelho físico — o teste foi em Chromium headless com
+      viewport e `hasTouch` emulados
+- [x] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key
+      exposta ao cliente — feita na branch `feat/deploy`. Achou e corrigiu uma
+      escalada de acesso no aceite de convite (e-mail conferido por string, sem
+      `email_confirmed_at`, com `enable_confirmations = false` no Auth) e a
+      ausência de headers de segurança. O que sobrou dela virou o M16
+- [x] Variáveis de ambiente configuradas na Vercel (preview e production) — as
+      11 em Production e Preview. **Duas estavam erradas e foram corrigidas em
+      19/08/2026:**
+
+      `NEXT_PUBLIC_SITE_URL` estava `http://localhost:3000` **em produção**.
+      Não era suposição: o valor é `NEXT_PUBLIC_`, então fica embutido no
+      bundle, e aparecia na `og:url` do HTML servido. Como `metadataBase` sai
+      da mesma variável, todo Open Graph apontava para a máquina de quem
+      abrisse. Pior que a prévia feia: os 8 consumidores incluem o
+      `emailRedirectTo` da confirmação de cadastro, o link de redefinição de
+      senha e as três URLs de retorno do Stripe — todos mandariam a pessoa
+      para `localhost`. Agora aponta para `https://pipe-flow-crm-delta.vercel.app`.
+
+      `STRIPE_WEBHOOK_SECRET` na Vercel ainda era o valor antigo; o novo tinha
+      sido trocado só no `.env.local`, que produção não lê. Sincronizado.
+- [~] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando
+      para a URL final — **a metade do banco está fechada.** As 8 migrations
+      constam aplicadas e registradas no remoto (`migration list` sem lacuna,
+      `db push --dry-run` devolvendo `up to date`): a dívida de histórico que o
+      M8 abriu e o M14.1 reparou não voltou. O schema foi conferido linha a
+      linha com `verify_summary.sql`, **0 FALHA** — RLS ativa em todas as
+      tabelas, `subscriptions` com uma única policy (select para membro, nenhuma
+      de escrita), as 3 funções de apoio `security definer` e os 5 triggers de
+      integridade presentes. Falta o webhook apontar para a URL final, que
+      depende do deploy existir
+
+- [x] **Build de produção local limpo** — `tsc --noEmit`, `next lint` e
+      `next build` sem erro nem aviso; 17 rotas, estáticas e dinâmicas como
+      esperado (webhook, `leads/[id]` e `invite/[token]` dinâmicas)
+
+- [x] **Varredura de segredos no artefato de build** — nenhum dos padrões
+      (`sb_secret_`, `sk_test_`, `sk_live_`, `whsec_`, chave do Resend) aparece
+      nos chunks de `.next/static/` nem no HTML pré-renderizado. O
+      `import "server-only"` de `lib/supabase/admin.ts` continua segurando: os
+      4 consumidores da service-role são os documentados (webhook, aceite de
+      convite, e-mail de cobrança recusada e `lib/limits.ts`), todos no servidor
 - [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
       ver nota abaixo
-- [ ] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
+- [~] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
       — o upgrade aqui precisa ser o checkout percorrido pelo **navegador**, com
       cartão de teste na tela do Stripe: é o único trecho do M14 que a
       verificação por API não cobriu
+
+      **O deploy está no ar** em `https://pipe-flow-crm-delta.vercel.app`, e o
+      que dá para exercitar sem sessão foi exercitado (19/08/2026):
+
+      - As 4 rotas autenticadas em 307 para `/login?next=…`, preservando o
+        destino; as públicas em 200
+      - Os **4 headers de segurança** presentes na resposta real, e o 404
+        customizado em português. Antes deste deploy eram **0 de 4** — a
+        `feat/deploy` nunca tinha sido pushada, e produção rodava `1c80c4a`,
+        anterior ao `bffa516`. Ou seja: os headers **e a correção da escalada
+        no aceite de convite** estavam fora do ar sem ninguém notar
+      - Webhook recusando assinatura forjada com 400 e GET com 405
+      - **Fluxo de "esqueci a senha" testado de verdade**: o disparo gerou
+        `recovery_sent_at` e token no `auth.users` 13s após a chamada — prova
+        que o 200 da API sozinho não dá, já que ela responde 200 até para
+        e-mail inexistente. O `/callback` com code inválido devolve mensagem em
+        português, e as duas tentativas de open redirect (`https://evil.com` e
+        `//evil.com`) terminam no próprio domínio: o `safeNext()` do M9 vale em
+        produção
+
+      **Falta o que exige sessão e cartão**: cadastro → workspace → lead →
+      negócio → upgrade pelo navegador. E a entrega SMTP do e-mail de
+      recuperação não foi confirmada — o alvo do teste foi um domínio fictício
+      de propósito, para não disparar e-mail a terceiro.
 - [ ] Decidir sobre `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: usar (Payment Element)
       ou remover do `.env.example` — hoje está documentada e inerte
 - [ ] Levar o botão de upgrade às telas de leads e membros ao bater o teto do
@@ -926,6 +1039,100 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
 - [ ] README final com setup, variáveis e comandos
 
 **Commit final:** `chore: polimento final e deploy em produção`
+
+### Preparação de deploy — o que foi conferido em 19/08/2026
+
+Auditoria de pré-deploy sobre o banco de produção e o build local. Nada de
+código de produto mudou; a única correção foi na ferramenta de verificação.
+
+**Banco de produção: fechado.** Ver o item da checklist acima — 8 migrations
+aplicadas e registradas, 0 FALHA no `verify_summary.sql`.
+
+**A verificação estava mentindo, e foi corrigida** (`cd0acfa`).
+`stripe_events` e `payment_alerts` são deny-all de propósito — RLS ligada,
+policy nenhuma, `revoke all` de `anon`/`authenticated` — e a checagem #2 lia
+isso como falha. Toda execução devolvia 2 FALHA falsas. Duas falhas permanentes
+num relatório que se lê pelo topo treinam quem roda a ignorá-lo, e a próxima
+falha, essa real, chegaria no meio de um ruído já considerado normal. Para
+essas duas o veredito se inverte: policy nenhuma é o esperado, ganhar uma é que
+é regressão, e o que passa a ser conferido é o `revoke` — a garantia de verdade,
+conforme o M14.1 verificou rodando. Confirmado no remoto: as duas sem nenhum
+grant para `anon`/`authenticated`.
+
+**Os advisories do `next@14.2.35` seguem inaplicáveis**, reconferidos um a um
+contra este código em vez de aceitos pela severidade do relatório. `npm audit
+--omit=dev` acusa 2 high, e os dois pedem `next@16` — o major que o M16 agenda
+**depois** do deploy, de propósito. Nenhuma precondição existe aqui: não há
+custom server (SSRF em Server Actions), nenhum `rewrite` configurado (SSRF por
+host de destino), nenhuma rota em `runtime = "edge"` (payload ilimitado de
+Server Action) e nem Pages Router nem i18n. As de PostCSS são de build time e
+o projeto não processa CSS de terceiro. Continua dívida agendada, não incidente.
+
+**Segredos: nenhum versionado e nenhum no bundle.** O histórico inteiro não tem
+`.env.local`; só o `.env.example`, que é documentação sem valor real. As chaves
+locais são todas de **teste** (`sk_test_`, `pk_test_`) e o `STRIPE_PRICE_ID_PRO`
+segue um `price_`, não o `prod_` que o M14 corrigiu.
+
+⚠️ **O que ainda bloqueia o deploy de verdade** — nada disso é código, e nenhum
+item pode ser fechado sem a URL pública existir:
+
+1. **Variáveis na Vercel** (preview e production). São 11, e uma delas muda de
+   valor: `NEXT_PUBLIC_SITE_URL` deixa de ser `localhost:3000`. Os 8 pontos que
+   a consomem leem do `lib/env.ts`, então é uma variável só a trocar — links de
+   convite, `emailRedirectTo` do Auth e as três URLs de retorno do Stripe
+   passam a valer juntos.
+2. **Chaves do Stripe em modo live** e o `STRIPE_WEBHOOK_SECRET` **novo**: o
+   atual veio do `stripe listen` e vale só para o túnel local. O endpoint de
+   produção gera outro, e o webhook recusa com 400 até ele ser trocado.
+
+   **Os valores exatos do endpoint, para não serem redigitados de memória:**
+
+   | Campo | Valor |
+   | --- | --- |
+   | URL | `https://<domínio>/api/stripe/webhook` |
+   | Eventos | `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed` |
+
+   O path é `/api/stripe/webhook` — **`stripe` antes, `webhook` no singular**.
+   A ordem invertida ou o plural (`/api/webhooks/stripe`) devolve 404 em todo
+   evento, e o modo de falha é o mesmo do secret errado: o checkout completa, o
+   cliente paga, e só a entrega falha. O caminho vem da estrutura de pastas do
+   App Router (`app/api/stripe/webhook/route.ts`) e não é configurável por
+   variável — mudá-lo exige mover o arquivo.
+
+   **São quatro eventos, não três.** `customer.subscription.updated` é o que
+   carrega renovação, troca de plano e a volta de `past_due` para `active`
+   depois que o cartão é regularizado — ele divide o handler com `.deleted`
+   (`syncSubscription`). Sem ele assinado, um workspace que falha a cobrança e
+   depois se recupera fica preso no `PastDueBanner`, e o `current_period_end`
+   nunca avança na renovação. É a assinatura que segue viva com o app achando
+   que não.
+3. **Domínio verificado no Resend** e `RESEND_FROM_EMAIL` apontando para ele —
+   a pendência herdada do M10. Enquanto for o sandbox, convite para terceiro
+   cai no link manual.
+
+   **Adiado por decisão explícita, em 19/08/2026.** O domínio comprado
+   (`airabbit.app`) só é liberado no mês seguinte, e sem controle do DNS não há
+   como criar os registros SPF/DKIM que o Resend exige — é requisito do
+   protocolo de e-mail, não do fornecedor: trocar de provedor não contorna, e
+   `vercel.app` não serve porque a zona não é nossa. O domínio chegou a ser
+   adicionado no Resend e ficou em `not_started`, com os 3 registros pendentes.
+
+   O projeto segue sem isso porque o convite **continua funcionando** pelo link
+   manual: o admin cria, a tela mostra a URL e ele repassa. Todas as regras
+   valem igual — token de 32 bytes, expiração de 7 dias, limite do plano e
+   e-mail confirmado. É exatamente o caso que o M10 previu ao fazer
+   `sendInviteEmail()` devolver `delivered: false` em vez de lançar, para que
+   "Resend não configurado" nunca virasse "não é possível convidar". O que se
+   perde é o envio automático para terceiros, não o fluxo.
+4. **Smoke test pelo navegador** na URL pública: cadastro → workspace → lead →
+   negócio → upgrade.
+
+O item 2 tem uma ordem obrigatória: o endpoint do webhook só pode ser criado
+no Stripe **depois** que o domínio existir, e o `STRIPE_WEBHOOK_SECRET` só
+depois do endpoint. Um deploy com o secret do `stripe listen` sobe com a
+cobrança silenciosamente quebrada — o checkout completa, o Stripe entrega o
+evento, o handler recusa por assinatura inválida e o workspace pago nunca
+vira Pro.
 
 **Pendência herdada do M10 — envio de convite para terceiros.** O fluxo de
 convite funciona ponta a ponta, mas hoje o remetente é o sandbox
@@ -948,13 +1155,67 @@ remetente é um domínio real.
 
 ---
 
+### M16 · Next 16 e React 19
+
+**Branch:** `chore/next-16`
+
+**Objetivo:** sair do `next@14.2.35`, que é o fim da linha 14.x e acumula
+advisories sem correção dentro do major.
+
+Aberto pela auditoria do `feat/deploy`. **Depois do M15, não dentro dele**: a
+auditoria entregou uma correção de escalada de acesso, e empilhar um major do
+framework na mesma janela de deploy tornaria indiagnosticável qual dos dois
+quebrou, se algo quebrar. Separar é o que mantém cada mudança rastreável.
+
+- [ ] `npx @next/codemod@canary upgrade latest` — cobre a maior parte do mecânico
+- [ ] `cookies()` vira async em **6 call-sites**: `app/(app)/layout.tsx:37`,
+      `app/(app)/workspaces/actions.ts:115` e `:150`,
+      `app/invite/[token]/actions.ts:243`, `lib/data/workspaces.ts:58`,
+      `lib/supabase/server.ts:21`
+- [ ] `params` / `searchParams` viram Promise em **5 páginas**: `leads`,
+      `leads/[id]`, `login`, `signup`, `invite/[token]`
+- [ ] Resolver `next-themes` — ver nota abaixo
+- [ ] Subir `@types/react` / `@types/react-dom` para `^19` e `eslint-config-next`
+      para a versão par do Next
+- [ ] Reteste dirigido: troca de workspace, aceite de convite e toggle de tema
+      (os três caminhos que tocam cookie), mais o webhook do Stripe
+- [ ] `npm audit --omit=dev` limpo ao final
+
+**Commit final:** `chore: next 16 e react 19`
+
+**O bloqueio real é o React 19, não o Next.** O Next 16 o exige, e
+`next-themes@0.3` declara peer `^16.8 || ^17 || ^18` — sem 19. Ou sobe a
+biblioteca (se houver versão compatível na época), ou troca por outra, ou
+instala com `--legacy-peer-deps` aceitando que o peer está mentindo. As demais
+já declaram 19: `recharts`, `sonner`, `react-hook-form` e `@dnd-kit` foram
+conferidos. O toggle de tema é requisito do brand guide, então "remover" não é
+saída.
+
+**Metade da migração de `cookies()` já foi paga.** `lib/supabase/server.ts` é
+`async` desde o M8 exatamente por isso — a nota lá em cima já dizia "chamar com
+`await` desde já evita ter de tocar em toda call-site no upgrade". Os 6
+call-sites acima são o resto.
+
+**Urgência real: baixa.** Os 11 advisories do `next@14.2.35` foram revisados
+contra este código na auditoria — os de maior severidade exigem i18n no Pages
+Router, custom server ou rewrites com host dinâmico, e nenhum existe aqui.
+Sobram cache poisoning de RSC e exposição de Server Functions, reais mas de
+impacto bem menor que o furo de convite já corrigido. É dívida técnica
+agendada, não incidente.
+
+---
+
 ## Ordem de dependências
 
 ```
 M0 → M1 → M2 → M3 → M4 ─┐
-                M3 → M5 ─┼→ M8 → M9 → M10 → M11 → M12 → M13 → M14 → M15
+                M3 → M5 ─┼→ M8 → M9 → M10 → M11 → M12 → M13 → M14 → M15 → M16
                 M3 → M6 ─┤
                 M3 → M7 ─┘
 ```
 
 M4, M5, M6 e M7 dependem só do M3 e podem ser feitos em paralelo. Toda a Fase 2 é sequencial: M8 é pré-requisito de tudo, e M10 (workspace ativo) precisa existir antes de M11–M13, que dependem do escopo por workspace.
+
+O M16 é o único milestone que não entrega produto: é manutenção de dependência,
+aberta pela auditoria de segurança do `feat/deploy`. Fica depois do M15 de
+propósito — ver a justificativa na seção dele.

@@ -65,7 +65,21 @@ export function DealCardActions({ deal, owners, leads }: DealCardActionsProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="-mr-1 -mt-1 size-7 shrink-0 text-muted-foreground opacity-0 transition-opacity focus-visible:opacity-100 group-hover/card:opacity-100 data-[state=open]:opacity-100"
+            /*
+             * Só some onde existe hover para trazê-lo de volta.
+             *
+             * `opacity-0` puro deixava este botão invisível para sempre no
+             * toque — e ele é o único caminho não-arrasto para mover um card.
+             * A alternativa "mais confiável no toque" que o comentário abaixo
+             * promete não existia de fato num telefone. `hover:hover` limita a
+             * revelação-por-hover aos ponteiros finos; no toque o botão nasce
+             * visível.
+             */
+            className={cn(
+              "-mr-1 -mt-1 size-7 shrink-0 text-muted-foreground transition-opacity",
+              "[@media(hover:hover)]:opacity-0",
+              "focus-visible:opacity-100 group-hover/card:opacity-100 data-[state=open]:opacity-100",
+            )}
             aria-label={`Ações para ${deal.title}`}
           >
             <MoreHorizontal className="size-4" />

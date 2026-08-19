@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 
@@ -7,7 +8,6 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { isActiveNavItem, navItems } from "@/components/layout/nav-items";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { User } from "@/types";
 
 interface TopbarProps {
@@ -15,6 +15,8 @@ interface TopbarProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onOpenMobileNav: () => void;
+  /** Some com o botão de recolher onde a sidebar é trilho fixo (md–lg). */
+  hideToggle?: boolean;
 }
 
 export function Topbar({
@@ -22,6 +24,7 @@ export function Topbar({
   collapsed,
   onToggleCollapsed,
   onOpenMobileNav,
+  hideToggle = false,
 }: TopbarProps) {
   const pathname = usePathname();
   const current = navItems.find((item) => isActiveNavItem(pathname, item.href));
@@ -41,7 +44,7 @@ export function Topbar({
       <Button
         variant="ghost"
         size="icon"
-        className="hidden md:inline-flex"
+        className={hideToggle ? "hidden" : "hidden md:inline-flex"}
         onClick={onToggleCollapsed}
         aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
       >
@@ -53,18 +56,30 @@ export function Topbar({
       </span>
 
       <div className="ml-auto flex items-center gap-1">
-        <div className="relative hidden sm:block">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          {/* Busca real chega com a listagem de leads (M4). */}
-          <Input
-            type="search"
-            disabled
-            placeholder="Buscar leads e negócios…"
-            aria-label="Buscar"
-            title="A busca entra junto com a listagem de leads"
-            className="h-9 w-56 pl-8 lg:w-72"
-          />
-        </div>
+        {/*
+          Atalho para a busca, não um campo de busca.
+
+          O placeholder desabilitado que morava aqui prometia "buscar leads e
+          negócios" desde antes de a busca existir; hoje ela existe, mas em
+          `/leads`, com filtros de status, responsável e período que não cabem
+          numa caixa da topbar. Um segundo campo que só soubesse fazer menos
+          seria pior que um link para o que faz tudo.
+
+          Vira só ícone abaixo de `sm`: ao lado do tema e do menu do usuário,
+          o rótulo estourava a barra num telefone estreito.
+        */}
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="gap-2 text-muted-foreground"
+        >
+          <Link href="/leads">
+            <Search className="size-4" />
+            <span className="hidden sm:inline">Buscar</span>
+            <span className="sr-only sm:hidden">Buscar leads</span>
+          </Link>
+        </Button>
         <ThemeToggle />
         <UserMenu user={user} />
       </div>

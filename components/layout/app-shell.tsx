@@ -48,6 +48,33 @@ export function AppShell({
   // O valor inicial vem do cookie lido no servidor, então a sidebar já nasce
   // no estado certo — sem piscar de aberta para recolhida na hidratação.
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
+
+  /*
+   * Entre `md` e `lg` a sidebar fica sempre em trilho de ícones.
+   *
+   * Ela aparece em `md` (768px) já com 256px de largura — num tablet isso é um
+   * terço da tela, e sobrava menos de duas colunas do Kanban visíveis. O
+   * ponto onde cabem sidebar aberta e conteúdo é `lg`, não `md`.
+   *
+   * É estado derivado do viewport, e não preferência: por isso não escreve
+   * cookie e não altera `collapsed`. Ao passar de `lg`, a escolha que a pessoa
+   * tinha feito volta a valer exatamente como estava.
+   */
+  const [railOnly, setRailOnly] = React.useState(false);
+
+  React.useEffect(() => {
+    const query = window.matchMedia(
+      "(min-width: 768px) and (max-width: 1023.98px)",
+    );
+    const sync = () => setRailOnly(query.matches);
+
+    sync();
+    query.addEventListener("change", sync);
+
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  const showCollapsed = collapsed || railOnly;
   const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
 
   function toggleCollapsed() {
@@ -64,14 +91,14 @@ export function AppShell({
         <aside
           className={cn(
             "hidden shrink-0 border-r bg-card transition-[width] duration-200 md:sticky md:top-0 md:block md:h-screen",
-            collapsed ? "md:w-[4.5rem]" : "md:w-64",
+            showCollapsed ? "md:w-[4.5rem]" : "md:w-64",
           )}
         >
           <SidebarContent
             workspaces={workspaces}
             activeWorkspace={activeWorkspace}
             plan={plan}
-            collapsed={collapsed}
+            collapsed={showCollapsed}
           />
         </aside>
 
@@ -93,8 +120,10 @@ export function AppShell({
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar
             user={user}
-            collapsed={collapsed}
+            collapsed={showCollapsed}
             onToggleCollapsed={toggleCollapsed}
+            /* Entre md e lg não há o que alternar: a sidebar é trilho fixo. */
+            hideToggle={railOnly}
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
           {banner}

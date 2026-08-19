@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import {
   Bar,
   BarChart,
@@ -29,6 +30,30 @@ const STAGE_FILL: Record<string, string> = {
   proposta_enviada: "hsl(var(--stage-proposta-enviada))",
   negociacao: "hsl(var(--stage-negociacao))",
 };
+
+/**
+ * `true` abaixo do breakpoint `sm` do Tailwind (640px).
+ *
+ * Media query em JS, e não classe utilitária, porque o que precisa mudar é
+ * uma prop numérica do Recharts — `width` do eixo — que não existe como CSS.
+ * Começa em `false` e só corrige após montar: no servidor não há viewport, e
+ * assumir desktop mantém o HTML inicial igual ao caso mais comum.
+ */
+function useIsCompact() {
+  const [compact, setCompact] = React.useState(false);
+
+  React.useEffect(() => {
+    const query = window.matchMedia("(max-width: 639px)");
+    const sync = () => setCompact(query.matches);
+
+    sync();
+    query.addEventListener("change", sync);
+
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  return compact;
+}
 
 interface FunnelDatum extends FunnelStage {
   label: string;
@@ -66,6 +91,20 @@ function FunnelTooltip({
  * BRL fica no rótulo e no tooltip, sem um segundo eixo.
  */
 export function FunnelChart({ data }: { data: FunnelStage[] }) {
+  /*
+   * A faixa dos rótulos encolhe no telefone.
+   *
+   * `width` do YAxis é px fixo — o Recharts não aceita porcentagem aqui. Em
+   * 132px, num viewport de 360px (onde o gráfico tem ~280px úteis), o eixo
+   * levava quase metade da largura e as barras viravam tocos de poucos
+   * pixels: o funil deixava de comunicar proporção, que é a única coisa que
+   * ele existe para mostrar. Abaixo de `sm` o eixo cai para 96px e a fonte
+   * para 10px, e "Contato Realizado" passa a truncar — perda aceitável, já
+   * que a cor da barra repete a etapa e o tooltip traz o nome inteiro.
+   */
+  const compact = useIsCompact();
+  const axisWidth = compact ? 96 : 132;
+
   const chartData: FunnelDatum[] = data.map((entry) => ({
     ...entry,
     label: DEAL_STAGE_LABELS[entry.stage],
@@ -86,7 +125,7 @@ export function FunnelChart({ data }: { data: FunnelStage[] }) {
       <BarChart
         data={chartData}
         layout="vertical"
-        margin={{ top: 4, right: 44, bottom: 4, left: 4 }}
+        margin={{ top: 4, right: compact ? 28 : 44, bottom: 4, left: 4 }}
         barCategoryGap={12}
       >
         {/* Eixo de valores oculto: o rótulo em cada barra já dá o número, e uma
@@ -95,19 +134,24 @@ export function FunnelChart({ data }: { data: FunnelStage[] }) {
         <YAxis
           type="category"
           dataKey="label"
-          width={132}
+          width={axisWidth}
           tickLine={false}
           axisLine={false}
           tick={{
             fill: "hsl(var(--muted-foreground))",
-            fontSize: 11,
+            fontSize: compact ? 10 : 11,
           }}
         />
         <Tooltip
           content={<FunnelTooltip />}
           cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
         />
-        <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={24} isAnimationActive={false}>
+        <Bar
+          dataKey="count"
+          radius={[0, 4, 4, 0]}
+          maxBarSize={24}
+          isAnimationActive={false}
+        >
           {chartData.map((entry) => (
             <Cell key={entry.stage} fill={STAGE_FILL[entry.stage]} />
           ))}

@@ -55,3 +55,54 @@ export function TableSkeleton({
     </div>
   );
 }
+
+/**
+ * Placeholder do `<PageHeader>` — título, descrição e, opcionalmente, o botão
+ * de ação. Mantém a mesma altura e o mesmo `pb-6` do componente real, para o
+ * conteúdo abaixo não saltar quando os dados chegam.
+ */
+export function PageHeaderSkeleton({
+  withAction = false,
+}: {
+  withAction?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-3 pb-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-4 w-64" />
+      </div>
+      {withAction ? <Skeleton className="h-9 w-36 shrink-0" /> : null}
+    </div>
+  );
+}
+
+/** Placeholder de uma seção em card de `/settings`: cabeçalho e N linhas. */
+export function SectionSkeleton({
+  rows = 3,
+  className,
+}: {
+  rows?: number;
+  className?: string;
+}) {
+  return (
+    <div className={cn("rounded-xl border bg-card", className)}>
+      <div className="space-y-2 p-5">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-4 w-56" />
+      </div>
+      <div className="divide-y border-t">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div key={index} className="flex items-center gap-3 px-5 py-3.5">
+            <Skeleton className="size-9 shrink-0 rounded-full" />
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+            <Skeleton className="h-5 w-16 shrink-0" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

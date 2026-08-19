@@ -65,93 +65,130 @@ export async function UpcomingDealsCard() {
             className="py-8"
           />
         ) : (
-          <Table>
-            <TableHeader className="[&_th]:text-label">
-              <TableRow>
-                <TableHead>Negócio</TableHead>
-                <TableHead className="hidden md:table-cell">Etapa</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  Responsável
-                </TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-right">Prazo</TableHead>
-              </TableRow>
-            </TableHeader>
+          /*
+           * Rolagem própria da tabela — rede de segurança, não o plano A.
+           *
+           * As colunas de valor e prazo são `whitespace-nowrap` (senão "3 dias
+           * atrasado" quebra em duas linhas e desalinha a altura da linha), o
+           * que dá à tabela uma largura mínima maior que a do card no
+           * telefone. Sem este container a página inteira ganhava barra
+           * horizontal e levava junto o cabeçalho e os cards de métrica.
+           *
+           * Mas rolagem sozinha não resolvia: em 375px a tabela media 467px
+           * dentro de 293px úteis — 37% do conteúdo escondido, sem nenhuma
+           * pista de que havia mais à direita. Por isso as colunas de menor
+           * prioridade somem por breakpoint (mesmo padrão de `leads-table`), e
+           * o que elas diziam reaparece embaixo do nome do negócio. O
+           * container continua aqui para o caso de um título longo demais.
+           */
+          <div className="-mx-6 overflow-x-auto px-6">
+            <Table>
+              <TableHeader className="[&_th]:text-label">
+                <TableRow>
+                  <TableHead>Negócio</TableHead>
+                  <TableHead className="hidden md:table-cell">Etapa</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Responsável
+                  </TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">
+                    Valor
+                  </TableHead>
+                  <TableHead className="text-right">Prazo</TableHead>
+                </TableRow>
+              </TableHeader>
 
-            <TableBody>
-              {upcoming.map(({ deal, owner, lead, daysLeft }) => {
-                const overdue = daysLeft < 0;
-                const soon = daysLeft >= 0 && daysLeft <= 3;
+              <TableBody>
+                {upcoming.map(({ deal, owner, lead, daysLeft }) => {
+                  const overdue = daysLeft < 0;
+                  const soon = daysLeft >= 0 && daysLeft <= 3;
 
-                return (
-                  <TableRow key={deal.id}>
-                    <TableCell className="max-w-[14rem]">
-                      <span className="block truncate font-medium">
-                        {deal.title}
-                      </span>
-                      {lead ? (
-                        <Link
-                          href={`/leads/${lead.id}`}
-                          className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          {lead.company ?? lead.name}
-                        </Link>
-                      ) : null}
-                    </TableCell>
-
-                    <TableCell className="hidden md:table-cell">
-                      {/* `whitespace-nowrap` porque "Contato Realizado" quebra
-                          em duas linhas e desalinha a altura da linha. */}
-                      <StageBadge
-                        stage={deal.stage}
-                        className="whitespace-nowrap"
-                      />
-                    </TableCell>
-
-                    <TableCell className="hidden sm:table-cell">
-                      {owner ? (
-                        <span className="flex min-w-0 items-center gap-2">
-                          <Avatar className="size-6 shrink-0">
-                            <AvatarFallback className="text-[10px]">
-                              {initials(owner.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {owner.full_name}
-                          </span>
+                  return (
+                    <TableRow key={deal.id}>
+                      {/* 14rem (224px) sozinho ainda estourava o card em
+                          375px: com a coluna de prazo, a tabela dava 352px em
+                          293px úteis. `w-full` + `max-w-0` faz a célula ceder
+                          a largura que sobra em vez de exigi-la — o título
+                          trunca antes de empurrar a tabela. */}
+                      <TableCell className="w-full max-w-0 sm:max-w-[14rem]">
+                        <span className="block truncate font-medium">
+                          {deal.title}
                         </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="text-metric whitespace-nowrap text-right font-medium">
-                      {formatCurrency(deal.value)}
-                    </TableCell>
-
-                    <TableCell className="whitespace-nowrap text-right">
-                      <span
-                        className={cn(
-                          "inline-flex items-center justify-end gap-1 text-xs",
-                          overdue && "font-medium text-danger",
-                          soon && "font-medium text-warning",
-                          !overdue && !soon && "text-muted-foreground",
-                        )}
-                      >
-                        {overdue || soon ? (
-                          <CalendarClock className="size-3 shrink-0" aria-hidden />
+                        {lead ? (
+                          <Link
+                            href={`/leads/${lead.id}`}
+                            className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            {lead.company ?? lead.name}
+                          </Link>
                         ) : null}
-                        {deadlineLabel(daysLeft)}
-                      </span>
-                      <span className="text-metric block text-[11px] text-muted-foreground">
-                        {formatDate(deal.due_date)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                        {/* O valor perde a coluna abaixo de `sm` e reaparece
+                            aqui: é o dado que decide a prioridade da linha, e
+                            deixá-lo atrás de rolagem lateral o tornaria
+                            invisível justamente no telefone. */}
+                        <span className="text-metric mt-0.5 block text-xs font-medium sm:hidden">
+                          {formatCurrency(deal.value)}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="hidden md:table-cell">
+                        {/* `whitespace-nowrap` porque "Contato Realizado" quebra
+                            em duas linhas e desalinha a altura da linha. */}
+                        <StageBadge
+                          stage={deal.stage}
+                          className="whitespace-nowrap"
+                        />
+                      </TableCell>
+
+                      <TableCell className="hidden sm:table-cell">
+                        {owner ? (
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Avatar className="size-6 shrink-0">
+                              <AvatarFallback className="text-[10px]">
+                                {initials(owner.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate text-xs text-muted-foreground">
+                              {owner.full_name}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-metric hidden whitespace-nowrap text-right font-medium sm:table-cell">
+                        {formatCurrency(deal.value)}
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-right">
+                        <span
+                          className={cn(
+                            "inline-flex items-center justify-end gap-1 text-xs",
+                            overdue && "font-medium text-danger",
+                            soon && "font-medium text-warning",
+                            !overdue && !soon && "text-muted-foreground",
+                          )}
+                        >
+                          {overdue || soon ? (
+                            <CalendarClock
+                              className="size-3 shrink-0"
+                              aria-hidden
+                            />
+                          ) : null}
+                          {deadlineLabel(daysLeft)}
+                        </span>
+                        <span className="text-metric block text-[11px] text-muted-foreground">
+                          {formatDate(deal.due_date)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>

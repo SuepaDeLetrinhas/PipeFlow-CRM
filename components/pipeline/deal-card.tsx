@@ -141,11 +141,24 @@ export function DealCard({
         <button
           type="button"
           className={cn(
-            "-ml-1 mt-0.5 shrink-0 cursor-grab touch-none rounded text-muted-foreground/50",
-            "opacity-0 transition-opacity focus-visible:opacity-100 focus-visible:outline-none",
+            // `size-6` (24px) é o mínimo do WCAG 2.2 para alvo de toque; o
+            // ícone continua 16px e fica centralizado, então o que cresce é a
+            // área de acerto, não o desenho. Medido em 375px: a alça era
+            // 16×16, e é o gesto principal do Kanban.
+            "-ml-1.5 mt-0 flex size-6 shrink-0 items-center justify-center",
+            "cursor-grab touch-none rounded text-muted-foreground/50",
+            // A alça só se esconde onde o hover pode revelá-la de novo. No
+            // toque ela fica visível: é a única pista de que o card se move.
+            "[@media(hover:hover)]:opacity-0",
+            "transition-opacity focus-visible:opacity-100 focus-visible:outline-none",
             "focus-visible:ring-1 focus-visible:ring-ring group-hover/card:opacity-100",
             "active:cursor-grabbing",
-            overlay && "opacity-100",
+            // Precisa repetir a media query para vencer a regra acima: as duas
+            // têm a mesma especificidade, e a de `@media` é emitida DEPOIS no
+            // CSS gerado — um `opacity-100` solto perderia, e a alça sumiria do
+            // DragOverlay justamente no desktop, onde o arraste é o gesto
+            // principal.
+            overlay && "opacity-100 [@media(hover:hover)]:opacity-100",
           )}
           aria-label={`Arrastar ${deal.title}`}
           {...attributes}

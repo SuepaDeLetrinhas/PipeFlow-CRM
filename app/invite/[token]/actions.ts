@@ -29,7 +29,18 @@ import { WORKSPACE_COOKIE, workspaceCookieOptions } from "@/lib/workspace-cookie
 
 /** O que a página precisa saber para se desenhar antes do clique. */
 export interface InvitePreview {
-  status: "valid" | "not_found" | "expired" | "already_member" | "full";
+  status:
+    | "valid"
+    | "not_found"
+    | "expired"
+    | "already_member"
+    | "full"
+    /**
+     * Sessão com o e-mail certo, mas ainda não confirmado. Estado próprio
+     * porque a saída é diferente das outras recusas: não é "peça outro
+     * convite", é "confirme o e-mail e volte a este link".
+     */
+    | "email_unconfirmed";
   workspaceName?: string;
   email?: string;
   role?: "admin" | "member";
@@ -97,6 +108,12 @@ export async function getInvitePreview(token: string): Promise<InvitePreview> {
       return { status: "valid", ...base };
     }
 
+    // Espelha a recusa da action: a tela precisa dizer o que vai acontecer, em
+    // vez de oferecer um botão que responde com erro depois do clique.
+    if (!user.email_confirmed_at) {
+      return { status: "email_unconfirmed", ...base };
+    }
+
     const { data: membership } = await admin
       .from("workspace_members")
       .select("id")
@@ -161,6 +178,27 @@ export async function acceptInviteAction(
     return {
       ok: false,
       message: `Este convite foi enviado para ${invite.email}. Entre com essa conta para aceitá-lo.`,
+    };
+  }
+
+  // O e-mail da sessão precisa estar CONFIRMADO, não só bater com o do convite.
+  //
+  // Sem esta checagem o convite deixa de ser nominal: como a conferência acima
+  // compara apenas a string do e-mail, qualquer pessoa que saiba (ou adivinhe)
+  // o endereço convidado se cadastra com ele e entra no workspace alheio — sem
+  // nunca provar que controla a caixa de entrada, e sem precisar do link. O
+  // token de 32 bytes protege quem não conhece a URL; isto protege contra quem
+  // a conhece e não é o destinatário.
+  //
+  // A regra vive aqui, e não só na configuração do Auth: `enable_confirmations`
+  // é um booleano num painel que alguém pode desligar para depurar um cadastro
+  // e esquecer ligado. Uma escrita que concede acesso a dados de outra empresa
+  // não pode depender disso.
+  if (!user.email_confirmed_at) {
+    return {
+      ok: false,
+      message:
+        "Confirme seu e-mail antes de aceitar o convite. Enviamos um link de confirmação no seu cadastro.",
     };
   }
 
