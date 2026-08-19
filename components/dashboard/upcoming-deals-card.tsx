@@ -66,15 +66,20 @@ export async function UpcomingDealsCard() {
           />
         ) : (
           /*
-           * Rolagem própria da tabela.
+           * Rolagem própria da tabela — rede de segurança, não o plano A.
            *
-           * As colunas de valor e prazo são `whitespace-nowrap` — sem isso o
-           * texto "3 dias atrasado" quebra em duas linhas e desalinha a
-           * altura da linha. O preço disso é uma largura mínima que, num
-           * telefone estreito, ultrapassa o card: sem este container a
-           * página inteira ganhava barra horizontal, e o `<main>` levava
-           * junto o cabeçalho e os cards de métrica. Confinando aqui, quem
-           * rola é a tabela.
+           * As colunas de valor e prazo são `whitespace-nowrap` (senão "3 dias
+           * atrasado" quebra em duas linhas e desalinha a altura da linha), o
+           * que dá à tabela uma largura mínima maior que a do card no
+           * telefone. Sem este container a página inteira ganhava barra
+           * horizontal e levava junto o cabeçalho e os cards de métrica.
+           *
+           * Mas rolagem sozinha não resolvia: em 375px a tabela media 467px
+           * dentro de 293px úteis — 37% do conteúdo escondido, sem nenhuma
+           * pista de que havia mais à direita. Por isso as colunas de menor
+           * prioridade somem por breakpoint (mesmo padrão de `leads-table`), e
+           * o que elas diziam reaparece embaixo do nome do negócio. O
+           * container continua aqui para o caso de um título longo demais.
            */
           <div className="-mx-6 overflow-x-auto px-6">
             <Table>
@@ -85,7 +90,9 @@ export async function UpcomingDealsCard() {
                   <TableHead className="hidden sm:table-cell">
                     Responsável
                   </TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">
+                    Valor
+                  </TableHead>
                   <TableHead className="text-right">Prazo</TableHead>
                 </TableRow>
               </TableHeader>
@@ -97,7 +104,12 @@ export async function UpcomingDealsCard() {
 
                   return (
                     <TableRow key={deal.id}>
-                      <TableCell className="max-w-[14rem]">
+                      {/* 14rem (224px) sozinho ainda estourava o card em
+                          375px: com a coluna de prazo, a tabela dava 352px em
+                          293px úteis. `w-full` + `max-w-0` faz a célula ceder
+                          a largura que sobra em vez de exigi-la — o título
+                          trunca antes de empurrar a tabela. */}
+                      <TableCell className="w-full max-w-0 sm:max-w-[14rem]">
                         <span className="block truncate font-medium">
                           {deal.title}
                         </span>
@@ -109,6 +121,13 @@ export async function UpcomingDealsCard() {
                             {lead.company ?? lead.name}
                           </Link>
                         ) : null}
+                        {/* O valor perde a coluna abaixo de `sm` e reaparece
+                            aqui: é o dado que decide a prioridade da linha, e
+                            deixá-lo atrás de rolagem lateral o tornaria
+                            invisível justamente no telefone. */}
+                        <span className="text-metric mt-0.5 block text-xs font-medium sm:hidden">
+                          {formatCurrency(deal.value)}
+                        </span>
                       </TableCell>
 
                       <TableCell className="hidden md:table-cell">
@@ -139,7 +158,7 @@ export async function UpcomingDealsCard() {
                         )}
                       </TableCell>
 
-                      <TableCell className="text-metric whitespace-nowrap text-right font-medium">
+                      <TableCell className="text-metric hidden whitespace-nowrap text-right font-medium sm:table-cell">
                         {formatCurrency(deal.value)}
                       </TableCell>
 

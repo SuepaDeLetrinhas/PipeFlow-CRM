@@ -15,6 +15,8 @@ interface TopbarProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   onOpenMobileNav: () => void;
+  /** Some com o botão de recolher onde a sidebar é trilho fixo (md–lg). */
+  hideToggle?: boolean;
 }
 
 export function Topbar({
@@ -22,6 +24,7 @@ export function Topbar({
   collapsed,
   onToggleCollapsed,
   onOpenMobileNav,
+  hideToggle = false,
 }: TopbarProps) {
   const pathname = usePathname();
   const current = navItems.find((item) => isActiveNavItem(pathname, item.href));
@@ -41,7 +44,7 @@ export function Topbar({
       <Button
         variant="ghost"
         size="icon"
-        className="hidden md:inline-flex"
+        className={hideToggle ? "hidden" : "hidden md:inline-flex"}
         onClick={onToggleCollapsed}
         aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
       >

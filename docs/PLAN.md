@@ -906,7 +906,14 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
 
 **Objetivo:** aplicação em produção, estável e acessível.
 
-- [ ] Revisão de todos os empty states, loadings e mensagens de erro
+- [ ] Revisão de todos os empty states, loadings e mensagens de erro —
+      **parcial.** Cobertura conferida tela a tela: falta `loading.tsx` só em
+      `/settings/billing`, que foi adicionado (cinco queries em paralelo numa
+      tela de cobrança — ficar em branco dá a impressão de que o plano sumiu).
+      A lista de convites pendentes segue sem empty state de propósito: some
+      inteira quando vazia, logo abaixo do formulário que cria convites, e uma
+      caixa "nenhum convite" ali seria ruído. Falta reler as mensagens de erro
+      das Server Actions uma a uma
 - [x] `error.tsx`, `not-found.tsx` e `loading.tsx` nas rotas principais — feito
       na branch `feat/deploy`. `app/(app)/error.tsx` cobre a área autenticada
       inteira, para o shell continuar de pé quando uma tela falha;
@@ -919,16 +926,41 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
       — **parcial.** Corrigido o que escondia controle no toque: a alça de
       arraste e o menu "⋯" do card eram `opacity-0` revelado por hover, então
       num telefone o único caminho não-arrasto para mover um card era invisível.
-      Agora o `opacity-0` vale só sob `@media (hover: hover)`. Falta a
-      varredura de contraste e o teste com leitor de tela
-- [ ] Revisão responsiva completa em mobile — **parcial.** Três defeitos reais
-      corrigidos: a tabela de "Prazos próximos" tinha células `whitespace-nowrap`
-      sem container de rolagem e empurrava a página inteira para o scroll
-      horizontal; o `YAxis` do funil era fixo em 132px e comia metade da largura
-      num viewport de 360px, reduzindo as barras a tocos; e a topbar carregava
-      um campo de busca desabilitado desde antes de a busca existir — virou
-      link para `/leads`, que é onde ela de fato mora. Falta a passada em
-      aparelho real: tudo aqui foi conferido por leitura e build, não em tela
+      Agora o `opacity-0` vale só sob `@media (hover: hover)`. A alça também
+      subiu de 16×16 para 24×24 (mínimo do WCAG 2.2 para alvo de toque, medido
+      em 375px) — o ícone segue com 16px, o que cresceu foi a área de acerto.
+      Falta a varredura de contraste e o teste com leitor de tela
+- [x] Revisão responsiva completa em mobile — feita na branch `feat/deploy`,
+      **renderizando as telas** em 375 / 768 / 1440px com Playwright, não só
+      lendo CSS. Resultado final: zero overflow horizontal em todas as telas
+      nas três larguras.
+
+      Primeira leva (por inspeção de código): a tabela de "Prazos próximos"
+      tinha células `whitespace-nowrap` sem container de rolagem e empurrava a
+      página inteira para o scroll horizontal; o `YAxis` do funil era fixo em
+      132px e comia metade da largura num viewport de 360px, reduzindo as
+      barras a tocos; e a topbar carregava um campo de busca desabilitado desde
+      antes de a busca existir — virou link para `/leads`.
+
+      Segunda leva, que **só apareceu com a tela renderizada**:
+
+      - "Prazos próximos" continuava cortada mesmo com a rolagem: 467px de
+        tabela em 293px úteis, 37% escondido sem nenhuma pista visual. Rolagem
+        lateral não é descoberta pelo leitor. Agora as colunas de menor
+        prioridade somem por breakpoint (padrão de `leads-table`) e o valor
+        reaparece embaixo do nome — 293px em 293px, sem corte
+      - A tabela Free × Pro tinha `min-w-[420px]` num card de 341px: 79px
+        escondidos, e o que sumia era a coluna "Pro", a que decide o upgrade.
+        O mínimo saiu e o padding das células encolhe abaixo de `sm`
+      - **A sidebar entrava em largura total já em `md` (768px)** — um terço da
+        tela do tablet, sobrando menos de duas colunas do Kanban. Entre `md` e
+        `lg` ela agora é trilho de ícones fixo (72px), e o botão de recolher
+        some porque não há o que alternar. É estado derivado do viewport, não
+        preferência: não escreve cookie, e acima de `lg` a escolha da pessoa
+        volta a valer
+
+      Não verificado em aparelho físico — o teste foi em Chromium headless com
+      viewport e `hasTouch` emulados
 - [x] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key
       exposta ao cliente — feita na branch `feat/deploy`. Achou e corrigiu uma
       escalada de acesso no aceite de convite (e-mail conferido por string, sem
