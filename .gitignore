@@ -44,3 +44,4 @@ supabase/.env
 # claude code
 .claude/settings.local.json
 node_modules
+.env*
