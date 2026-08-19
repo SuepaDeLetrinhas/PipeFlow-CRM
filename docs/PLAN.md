@@ -907,9 +907,28 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
 **Objetivo:** aplicação em produção, estável e acessível.
 
 - [ ] Revisão de todos os empty states, loadings e mensagens de erro
-- [ ] `error.tsx`, `not-found.tsx` e `loading.tsx` nas rotas principais
+- [x] `error.tsx`, `not-found.tsx` e `loading.tsx` nas rotas principais — feito
+      na branch `feat/deploy`. `app/(app)/error.tsx` cobre a área autenticada
+      inteira, para o shell continuar de pé quando uma tela falha;
+      `app/not-found.tsx` responde à URL sem rota, fora dos grupos, porque quem
+      chega a um link quebrado não está necessariamente logado; `loading.tsx`
+      em `dashboard`, `pipeline` e `settings`. **Não** em `leads/`: de lá o
+      boundary envolveria `leads/[id]` e o `notFound()` responderia 200 — a
+      razão já estava escrita em `leads-table-skeleton.tsx` e continua valendo
 - [ ] Acessibilidade: foco visível, navegação por teclado no Kanban, labels e contraste
-- [ ] Revisão responsiva completa em mobile
+      — **parcial.** Corrigido o que escondia controle no toque: a alça de
+      arraste e o menu "⋯" do card eram `opacity-0` revelado por hover, então
+      num telefone o único caminho não-arrasto para mover um card era invisível.
+      Agora o `opacity-0` vale só sob `@media (hover: hover)`. Falta a
+      varredura de contraste e o teste com leitor de tela
+- [ ] Revisão responsiva completa em mobile — **parcial.** Três defeitos reais
+      corrigidos: a tabela de "Prazos próximos" tinha células `whitespace-nowrap`
+      sem container de rolagem e empurrava a página inteira para o scroll
+      horizontal; o `YAxis` do funil era fixo em 132px e comia metade da largura
+      num viewport de 360px, reduzindo as barras a tocos; e a topbar carregava
+      um campo de busca desabilitado desde antes de a busca existir — virou
+      link para `/leads`, que é onde ela de fato mora. Falta a passada em
+      aparelho real: tudo aqui foi conferido por leitura e build, não em tela
 - [x] Auditoria de segurança: RLS em todas as tabelas, nenhuma service-role key
       exposta ao cliente — feita na branch `feat/deploy`. Achou e corrigiu uma
       escalada de acesso no aceite de convite (e-mail conferido por string, sem

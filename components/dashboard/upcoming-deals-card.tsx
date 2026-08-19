@@ -65,93 +65,111 @@ export async function UpcomingDealsCard() {
             className="py-8"
           />
         ) : (
-          <Table>
-            <TableHeader className="[&_th]:text-label">
-              <TableRow>
-                <TableHead>Negócio</TableHead>
-                <TableHead className="hidden md:table-cell">Etapa</TableHead>
-                <TableHead className="hidden sm:table-cell">
-                  Responsável
-                </TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="text-right">Prazo</TableHead>
-              </TableRow>
-            </TableHeader>
+          /*
+           * Rolagem própria da tabela.
+           *
+           * As colunas de valor e prazo são `whitespace-nowrap` — sem isso o
+           * texto "3 dias atrasado" quebra em duas linhas e desalinha a
+           * altura da linha. O preço disso é uma largura mínima que, num
+           * telefone estreito, ultrapassa o card: sem este container a
+           * página inteira ganhava barra horizontal, e o `<main>` levava
+           * junto o cabeçalho e os cards de métrica. Confinando aqui, quem
+           * rola é a tabela.
+           */
+          <div className="-mx-6 overflow-x-auto px-6">
+            <Table>
+              <TableHeader className="[&_th]:text-label">
+                <TableRow>
+                  <TableHead>Negócio</TableHead>
+                  <TableHead className="hidden md:table-cell">Etapa</TableHead>
+                  <TableHead className="hidden sm:table-cell">
+                    Responsável
+                  </TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-right">Prazo</TableHead>
+                </TableRow>
+              </TableHeader>
 
-            <TableBody>
-              {upcoming.map(({ deal, owner, lead, daysLeft }) => {
-                const overdue = daysLeft < 0;
-                const soon = daysLeft >= 0 && daysLeft <= 3;
+              <TableBody>
+                {upcoming.map(({ deal, owner, lead, daysLeft }) => {
+                  const overdue = daysLeft < 0;
+                  const soon = daysLeft >= 0 && daysLeft <= 3;
 
-                return (
-                  <TableRow key={deal.id}>
-                    <TableCell className="max-w-[14rem]">
-                      <span className="block truncate font-medium">
-                        {deal.title}
-                      </span>
-                      {lead ? (
-                        <Link
-                          href={`/leads/${lead.id}`}
-                          className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
-                        >
-                          {lead.company ?? lead.name}
-                        </Link>
-                      ) : null}
-                    </TableCell>
-
-                    <TableCell className="hidden md:table-cell">
-                      {/* `whitespace-nowrap` porque "Contato Realizado" quebra
-                          em duas linhas e desalinha a altura da linha. */}
-                      <StageBadge
-                        stage={deal.stage}
-                        className="whitespace-nowrap"
-                      />
-                    </TableCell>
-
-                    <TableCell className="hidden sm:table-cell">
-                      {owner ? (
-                        <span className="flex min-w-0 items-center gap-2">
-                          <Avatar className="size-6 shrink-0">
-                            <AvatarFallback className="text-[10px]">
-                              {initials(owner.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {owner.full_name}
-                          </span>
+                  return (
+                    <TableRow key={deal.id}>
+                      <TableCell className="max-w-[14rem]">
+                        <span className="block truncate font-medium">
+                          {deal.title}
                         </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-
-                    <TableCell className="text-metric whitespace-nowrap text-right font-medium">
-                      {formatCurrency(deal.value)}
-                    </TableCell>
-
-                    <TableCell className="whitespace-nowrap text-right">
-                      <span
-                        className={cn(
-                          "inline-flex items-center justify-end gap-1 text-xs",
-                          overdue && "font-medium text-danger",
-                          soon && "font-medium text-warning",
-                          !overdue && !soon && "text-muted-foreground",
-                        )}
-                      >
-                        {overdue || soon ? (
-                          <CalendarClock className="size-3 shrink-0" aria-hidden />
+                        {lead ? (
+                          <Link
+                            href={`/leads/${lead.id}`}
+                            className="block truncate text-xs text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            {lead.company ?? lead.name}
+                          </Link>
                         ) : null}
-                        {deadlineLabel(daysLeft)}
-                      </span>
-                      <span className="text-metric block text-[11px] text-muted-foreground">
-                        {formatDate(deal.due_date)}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+
+                      <TableCell className="hidden md:table-cell">
+                        {/* `whitespace-nowrap` porque "Contato Realizado" quebra
+                            em duas linhas e desalinha a altura da linha. */}
+                        <StageBadge
+                          stage={deal.stage}
+                          className="whitespace-nowrap"
+                        />
+                      </TableCell>
+
+                      <TableCell className="hidden sm:table-cell">
+                        {owner ? (
+                          <span className="flex min-w-0 items-center gap-2">
+                            <Avatar className="size-6 shrink-0">
+                              <AvatarFallback className="text-[10px]">
+                                {initials(owner.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="truncate text-xs text-muted-foreground">
+                              {owner.full_name}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
+                      </TableCell>
+
+                      <TableCell className="text-metric whitespace-nowrap text-right font-medium">
+                        {formatCurrency(deal.value)}
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-right">
+                        <span
+                          className={cn(
+                            "inline-flex items-center justify-end gap-1 text-xs",
+                            overdue && "font-medium text-danger",
+                            soon && "font-medium text-warning",
+                            !overdue && !soon && "text-muted-foreground",
+                          )}
+                        >
+                          {overdue || soon ? (
+                            <CalendarClock
+                              className="size-3 shrink-0"
+                              aria-hidden
+                            />
+                          ) : null}
+                          {deadlineLabel(daysLeft)}
+                        </span>
+                        <span className="text-metric block text-[11px] text-muted-foreground">
+                          {formatDate(deal.due_date)}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>
