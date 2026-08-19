@@ -967,7 +967,27 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
       `email_confirmed_at`, com `enable_confirmations = false` no Auth) e a
       ausência de headers de segurança. O que sobrou dela virou o M16
 - [ ] Variáveis de ambiente configuradas na Vercel (preview e production)
-- [ ] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando para a URL final
+- [~] Migrations aplicadas no Supabase de produção; webhook do Stripe apontando
+      para a URL final — **a metade do banco está fechada.** As 8 migrations
+      constam aplicadas e registradas no remoto (`migration list` sem lacuna,
+      `db push --dry-run` devolvendo `up to date`): a dívida de histórico que o
+      M8 abriu e o M14.1 reparou não voltou. O schema foi conferido linha a
+      linha com `verify_summary.sql`, **0 FALHA** — RLS ativa em todas as
+      tabelas, `subscriptions` com uma única policy (select para membro, nenhuma
+      de escrita), as 3 funções de apoio `security definer` e os 5 triggers de
+      integridade presentes. Falta o webhook apontar para a URL final, que
+      depende do deploy existir
+
+- [x] **Build de produção local limpo** — `tsc --noEmit`, `next lint` e
+      `next build` sem erro nem aviso; 17 rotas, estáticas e dinâmicas como
+      esperado (webhook, `leads/[id]` e `invite/[token]` dinâmicas)
+
+- [x] **Varredura de segredos no artefato de build** — nenhum dos padrões
+      (`sb_secret_`, `sk_test_`, `sk_live_`, `whsec_`, chave do Resend) aparece
+      nos chunks de `.next/static/` nem no HTML pré-renderizado. O
+      `import "server-only"` de `lib/supabase/admin.ts` continua segurando: os
+      4 consumidores da service-role são os documentados (webhook, aceite de
+      convite, e-mail de cobrança recusada e `lib/limits.ts`), todos no servidor
 - [ ] Domínio verificado no Resend e `RESEND_FROM_EMAIL` apontando para ele —
       ver nota abaixo
 - [ ] Deploy, smoke test do fluxo completo (cadastro → workspace → lead → negócio → upgrade)
@@ -981,6 +1001,63 @@ botões de cobrança somem e o texto muda para "peça a um administrador".
 - [ ] README final com setup, variáveis e comandos
 
 **Commit final:** `chore: polimento final e deploy em produção`
+
+### Preparação de deploy — o que foi conferido em 19/08/2026
+
+Auditoria de pré-deploy sobre o banco de produção e o build local. Nada de
+código de produto mudou; a única correção foi na ferramenta de verificação.
+
+**Banco de produção: fechado.** Ver o item da checklist acima — 8 migrations
+aplicadas e registradas, 0 FALHA no `verify_summary.sql`.
+
+**A verificação estava mentindo, e foi corrigida** (`cd0acfa`).
+`stripe_events` e `payment_alerts` são deny-all de propósito — RLS ligada,
+policy nenhuma, `revoke all` de `anon`/`authenticated` — e a checagem #2 lia
+isso como falha. Toda execução devolvia 2 FALHA falsas. Duas falhas permanentes
+num relatório que se lê pelo topo treinam quem roda a ignorá-lo, e a próxima
+falha, essa real, chegaria no meio de um ruído já considerado normal. Para
+essas duas o veredito se inverte: policy nenhuma é o esperado, ganhar uma é que
+é regressão, e o que passa a ser conferido é o `revoke` — a garantia de verdade,
+conforme o M14.1 verificou rodando. Confirmado no remoto: as duas sem nenhum
+grant para `anon`/`authenticated`.
+
+**Os advisories do `next@14.2.35` seguem inaplicáveis**, reconferidos um a um
+contra este código em vez de aceitos pela severidade do relatório. `npm audit
+--omit=dev` acusa 2 high, e os dois pedem `next@16` — o major que o M16 agenda
+**depois** do deploy, de propósito. Nenhuma precondição existe aqui: não há
+custom server (SSRF em Server Actions), nenhum `rewrite` configurado (SSRF por
+host de destino), nenhuma rota em `runtime = "edge"` (payload ilimitado de
+Server Action) e nem Pages Router nem i18n. As de PostCSS são de build time e
+o projeto não processa CSS de terceiro. Continua dívida agendada, não incidente.
+
+**Segredos: nenhum versionado e nenhum no bundle.** O histórico inteiro não tem
+`.env.local`; só o `.env.example`, que é documentação sem valor real. As chaves
+locais são todas de **teste** (`sk_test_`, `pk_test_`) e o `STRIPE_PRICE_ID_PRO`
+segue um `price_`, não o `prod_` que o M14 corrigiu.
+
+⚠️ **O que ainda bloqueia o deploy de verdade** — nada disso é código, e nenhum
+item pode ser fechado sem a URL pública existir:
+
+1. **Variáveis na Vercel** (preview e production). São 11, e uma delas muda de
+   valor: `NEXT_PUBLIC_SITE_URL` deixa de ser `localhost:3000`. Os 8 pontos que
+   a consomem leem do `lib/env.ts`, então é uma variável só a trocar — links de
+   convite, `emailRedirectTo` do Auth e as três URLs de retorno do Stripe
+   passam a valer juntos.
+2. **Chaves do Stripe em modo live** e o `STRIPE_WEBHOOK_SECRET` **novo**: o
+   atual veio do `stripe listen` e vale só para o túnel local. O endpoint de
+   produção gera outro, e o webhook recusa com 400 até ele ser trocado.
+3. **Domínio verificado no Resend** e `RESEND_FROM_EMAIL` apontando para ele —
+   a pendência herdada do M10. Enquanto for o sandbox, convite para terceiro
+   cai no link manual.
+4. **Smoke test pelo navegador** na URL pública: cadastro → workspace → lead →
+   negócio → upgrade.
+
+O item 2 tem uma ordem obrigatória: o endpoint do webhook só pode ser criado
+no Stripe **depois** que o domínio existir, e o `STRIPE_WEBHOOK_SECRET` só
+depois do endpoint. Um deploy com o secret do `stripe listen` sobe com a
+cobrança silenciosamente quebrada — o checkout completa, o Stripe entrega o
+evento, o handler recusa por assinatura inválida e o workspace pago nunca
+vira Pro.
 
 **Pendência herdada do M10 — envio de convite para terceiros.** O fluxo de
 convite funciona ponta a ponta, mas hoje o remetente é o sandbox
